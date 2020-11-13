@@ -344,12 +344,12 @@ void updateWeather(Map current, Map[] daily, String text) {
 			scale = 45 / scale
 		int cnt = 0
 		x = -0.5 * 800 / 5
-		y = Math.round(185 - (current.max - mintemp) * scale)
-		int y2 = Math.round(185 - (current.min - mintemp) * scale)
+		y = Math.round(160 - (current.max - mintemp) * scale)
+		int y2 = Math.round(160 - (current.min - mintemp) * scale)
 		String drawH = "<path d=\"M $x $y "
 		String drawL = "<path d=\"M $x $y2 "
 		start = "<rect width=\"550\" height=\"32\" fill=\"white\" />" +
-				"<text x=\"10\" y=\"30\" " + fontDaily + " fill=\"black\">" +
+				"<text x=\"0\" y=\"30\" " + fontDaily + " fill=\"black\">" +
 				text + "</text>"
 		displayDevice.addDrawing(10, 10, 550, 32, start, "yes")
 		String forecast = "<rect width=\"800\" height=\"170\" fill=\"white\" />"
@@ -398,7 +398,7 @@ void updateDevices() {
 		thermAttributes.each {
 			thermostat.put(it, thermostatDevice.currentState(it).value)
 		}
-		if (state["thermostatValues"] != thermostat)
+		if (!state["thermostatValues"].equals(thermostat))
 			changed = true
 	}
 	if (changed) {
@@ -426,17 +426,17 @@ void updateDevices() {
 		x = 90
 		y = 70
 		start += "<text x=\"$x\" y=\"$y\" " + font2 + " text-anchor=\"middle\" fill=\"black\">" +
-				thermostat.temperature + "°</text>"
+				(indoorTemp ?: "- -") + "°</text>"
 		x = 90
 		y = 120
 		start += "<text x=\"$x\" y=\"$y\" " + font + " text-anchor=\"middle\">" +
 				"<tspan dx=\"-70\" dy=\"0\" font-size=\"28\" font-family=\"Weather Icons\">&#xF053; </tspan>" +
-				thermostat.coolingSetpoint + "°" + mode + thermostat.heatingSetpoint +
+				(thermostat.coolingSetpoint ?: "- -") + "°" + mode + (thermostat.heatingSetpoint ?: "- -") +
 				"°<tspan dx=\"70\" dy=\"0\" font-size=\"28\" font-family=\"Weather Icons\"> &#xF055;</tspan></text>"
 		x = 90
 		y = 175
 		start += "<text x=\"$x\" y=\"$y\" " + font2 + " text-anchor=\"middle\">" +
-				(indoorTemp ?: "- -") + "°&#160;" + (indoorHumid ?: "- -") + "%</text>"
+				(thermostat.temperature ?: "- -") + "°&#160;" + (indoorHumid ?: "- -") + "%</text>"
 		displayDevice.addDrawing(310, 80, 180, 190, start, "no")
 
 		state["indoorTempValues"] = indoorTemp
@@ -446,17 +446,11 @@ void updateDevices() {
 }
 
 void subscriptionHandler(com.hubitat.hub.domain.Event evt) {
-	//evt?.properties?.each { item -> log.debug "$item.key = $item.value" }
-	if (evt.deviceId == indoorTempDevice?.deviceId) {
-		if (evt.name == "temperature")
-			runIn(2, updateDevices)
-	} else if (evt.deviceId == indoorHumidDevice?.deviceId) {
-		if (evt.name == "humidity")
-			runIn(2, updateDevices)
-	} else if (evt.deviceId == thermostatDevice?.deviceId) {
-		if (thermAttributes.indexOf(evt.name) >= 0)
-			runIn(2, updateDevices)
-	}
+	// evt?.properties?.each { item -> log.debug "$item.key = $item.value" }
+	if ((evt.deviceId == indoorTempDevice?.deviceId && evt.name == "temperature") ||
+			(evt.deviceId == indoorHumidDevice?.deviceId && evt.name == "humidity") ||
+			(evt.deviceId == thermostatDevice?.deviceId && thermAttributes.indexOf(evt.name) >= 0))
+		runIn(2, updateDevices)
 }
 
 void installed() {

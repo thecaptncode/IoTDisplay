@@ -142,9 +142,6 @@ namespace IoTDisplay.Common.Services
             }
         }
 
-        // Requires the libxx, tzdata and fontconfig packages to run in Linux
-        // /usr/local/share/fonts  fc-cache, fc-list
-
         #endregion Constructor / Dispose / Finalizer
 
         #region Methods (Private)

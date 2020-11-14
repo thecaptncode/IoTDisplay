@@ -39,14 +39,14 @@ namespace IoTDisplay.WebApp
     {
         #region Fields
 
-        private readonly OpenApiInfo openApiInfo = new OpenApiInfo
+        private readonly OpenApiInfo openApiInfo = new()
         {
             Title = "IoT Display API",
             Version = "v1",
             Description = "Internet of Things E-Paper Display Controller",
-            Contact = new OpenApiContact
+            Contact = new()
             {
-                Url = new System.Uri("https://github.com/thecaptncode")
+                Url = new("https://github.com/thecaptncode")
             }
         };
 
@@ -79,8 +79,8 @@ namespace IoTDisplay.WebApp
             services.AddSwaggerGen(o =>
             {
                 o.SwaggerDoc(openApiInfo.Version, openApiInfo);
-                var dir = new DirectoryInfo(AppContext.BaseDirectory);
-                foreach (var fi in dir.EnumerateFiles("*.xml"))
+                DirectoryInfo dir = new(AppContext.BaseDirectory);
+                foreach (FileInfo fi in dir.EnumerateFiles("*.xml"))
                 {
                     o.IncludeXmlComments(fi.FullName, includeControllerXmlComments: true);
                 }

@@ -21,7 +21,6 @@
 #region Using
 
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Timers;
 
 #endregion Using

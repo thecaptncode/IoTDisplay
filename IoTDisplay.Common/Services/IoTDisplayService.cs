@@ -47,7 +47,7 @@ namespace IoTDisplay.Common.Services
 
         public TimeSpan RefreshTime { get; }
 
-        public DateTime LastUpdated { get; set; }
+        public DateTime LastUpdated { get => lastUpdated; }
 
         #endregion Properties
 
@@ -59,9 +59,10 @@ namespace IoTDisplay.Common.Services
         #region Fields
 
         private readonly IEPaperDisplay display;
-        private readonly object updatelock = new object();
+        private readonly object updatelock = new();
         private static ClockTimer UpdateTimer;
         private static ClockTimer RefreshTimer;
+        private DateTime lastUpdated;
         private bool updating = false;
         private bool delayed = false;
 
@@ -86,7 +87,7 @@ namespace IoTDisplay.Common.Services
                 ScreenWidth = display.Width;
                 ScreenHeight = display.Height;
                 display.Clear();
-                // display.PowerOff(); Needs the newest WaveShare project
+                display.PowerOff();
             }
             if (rotation == 90 || rotation == 270)
             {
@@ -96,18 +97,18 @@ namespace IoTDisplay.Common.Services
             }
             Renderer = renderer;
             renderer.ScreenChanged += Renderer_ScreenChanged;
-            UpdateTimer = new ClockTimer
+            UpdateTimer = new()
             {
                 TargetMillisecond = 300000,
                 ToleranceMillisecond = 5000,
                 Enabled = true
             };
             UpdateTimer.Elapsed += UpdateScreen;
-            LastUpdated = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            lastUpdated = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             renderer.Create(ScreenWidth, ScreenHeight, ScreenRotation, statefolder, background, foreground);
             if (display != null && refreshtime != default)
             {
-                RefreshTimer = new ClockTimer
+                RefreshTimer = new()
                 {
                     TargetTime = refreshtime,
                     ToleranceMillisecond = 180000,
@@ -146,11 +147,16 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Private)
 
+        private DateTime GetLastUpdated()
+        {
+            return lastUpdated;
+        }
+
         private void Renderer_ScreenChanged(object sender, EventArgs e)
         {
             if (display == null)
             {
-                LastUpdated = DateTime.UtcNow;
+                lastUpdated = DateTime.UtcNow;
             }
             else
             {
@@ -188,11 +194,11 @@ namespace IoTDisplay.Common.Services
                         delayed = false;
                     }
                     // Handle if partial update ** TODO **
-                    // display.PowerOn(); Needs the newest WaveShare project
+                    display.PowerOn();
                     display.DisplayImage(bitmap);
-                    // display.PowerOff(); Needs the newest WaveShare project
+                    display.PowerOff();
                     bitmap.Dispose();
-                    LastUpdated = DateTime.UtcNow;
+                    lastUpdated = DateTime.UtcNow;
                 }
         }
 
@@ -203,14 +209,14 @@ namespace IoTDisplay.Common.Services
             //   Monochrome: black, white
             lock (display)
             {
-                // display.PowerOn(); Needs the newest WaveShare project
+                display.PowerOn();
                 for (int i = 0; i < 6; i++)
                 {
                     Console.WriteLine("Flushing screen");
                     display.ClearBlack();
                     display.Clear();
                 }
-                // display.PowerOff(); Needs the newest WaveShare project
+                display.PowerOff();
                 Console.WriteLine("Finished flushing screen");
                 Renderer.Refresh();
             }

@@ -177,7 +177,12 @@ void readWeather(hubitat.scheduling.AsyncResponse response, Map body) {
 				daily[cnt++] = info
 			}
 		}
-		String text = weatherData.alerts == null ? current.desc : weatherData.alerts
+		String text = current.desc
+		weatherData.alerts.each {
+			text += it.description.replace("\n", "").replace("\r", "").toLowerCase()
+		}
+		if (text.length() >= 60)
+			text = text.substring(0, 60)
 		if (dbgEnable) {
 			log.debug "${app.name} current: ${current}"
 			daily.each {
@@ -348,10 +353,10 @@ void updateWeather(Map current, Map[] daily, String text) {
 		int y2 = Math.round(160 - (current.min - mintemp) * scale)
 		String drawH = "<path d=\"M $x $y "
 		String drawL = "<path d=\"M $x $y2 "
-		start = "<rect width=\"550\" height=\"32\" fill=\"white\" />" +
+		start = "<rect width=\"530\" height=\"40\" fill=\"white\" />" +
 				"<text x=\"0\" y=\"30\" " + fontDaily + " fill=\"black\">" +
 				text + "</text>"
-		displayDevice.addDrawing(10, 10, 550, 32, start, "yes")
+		displayDevice.addDrawing(10, 10, 530, 40, start, "yes")
 		String forecast = "<rect width=\"800\" height=\"170\" fill=\"white\" />"
 		daily.each {
 			x = Math.round((cnt++ + 0.5) * 800 / 5)
@@ -622,10 +627,10 @@ void uninstalled() {
 /* Test clock
 {
   "timezone": "America/New_York",
-  "x": 550,
+  "x": 545,
   "y": 0,
-  "width": 250,
+  "width": 255,
   "height": 110,
-  "svgCommands": '<rect width="250" height="110" fill="white" /><text x="225" y="60" font-family="Poiret One" font-weight="900" font-size="48" text-anchor="end" fill="black">{0:t}</text><text x="225" y="110" font-family="Poiret One" font-weight="900" font-size="38" text-anchor="end" fill="black">{0:ddd MMM d}</text>'
+  "svgCommands": '<rect width="255" height="110" fill="white" /><text x="230" y="60" font-family="Poiret One" font-weight="900" font-size="48" text-anchor="end" fill="black">{0:t}</text><text x="230" y="110" font-family="Poiret One" font-weight="900" font-size="38" text-anchor="end" fill="black">{0:ddd MMM d}</text>'
 }
 */

@@ -40,7 +40,7 @@ namespace IoTDisplay.Common.Services
 
         public void AddImage(IoTDisplayActionService.ClockImage clockImage, int width, int height)
         {
-            RenderCommand cmd = new RenderCommand
+            RenderCommand cmd = new()
             {
                 Type = 'I',
                 X = clockImage.X,
@@ -54,7 +54,7 @@ namespace IoTDisplay.Common.Services
 
         public void AddDraw(IoTDisplayActionService.ClockDraw clockDraw)
         {
-            RenderCommand cmd = new RenderCommand
+            RenderCommand cmd = new()
             {
                 Type = 'D',
                 X = clockDraw.X,
@@ -68,7 +68,7 @@ namespace IoTDisplay.Common.Services
 
         public void AddTime(IoTDisplayActionService.ClockTime clockTime, int width, int height)
         {
-            RenderCommand cmd = new RenderCommand
+            RenderCommand cmd = new()
             {
                 Type = 'T',
                 X = clockTime.X,
@@ -113,17 +113,17 @@ namespace IoTDisplay.Common.Services
             this.ScreenBackgroundColor = screenbackground;
             if (string.IsNullOrWhiteSpace(commands))
             {
-                commandlist = new List<RenderCommand>();
+                commandlist = new();
             }
             else
             {
-                JsonSerializerOptions options = new JsonSerializerOptions
+                JsonSerializerOptions options = new()
                 {
                     AllowTrailingCommas = true
                 };
                 commandlist = JsonSerializer.Deserialize<List<RenderCommand>>(commands, options);
             }
-            TickTimer = new ClockTimer
+            TickTimer = new()
             {
                 TargetMillisecond = 55000,
                 ToleranceMillisecond = 5000,
@@ -175,7 +175,7 @@ namespace IoTDisplay.Common.Services
             {
                 foreach (RenderCommand item in commandlist)
                     if (item.Type == 'T' && item.LastText != null && item.LastText != time.ToString(item.Format))
-                        renderer.Text(new IoTDisplayActionService.Text
+                        renderer.Text(new()
                         {
                             X = item.X,
                             Y = item.Y,
@@ -194,7 +194,7 @@ namespace IoTDisplay.Common.Services
                     switch (item.Type)
                     {
                         case 'I':
-                            renderer.Image(new IoTDisplayActionService.Image { X = item.X, Y = item.Y, Filename = item.Format, Delay = hasDrawn }, false);
+                            renderer.Image(new() { X = item.X, Y = item.Y, Filename = item.Format, Delay = hasDrawn }, false);
                             break;
                         case 'D':
                             string cmd = string.Format(item.HexColor, time);
@@ -203,7 +203,7 @@ namespace IoTDisplay.Common.Services
                             {
                                 if (hasEmbeded)
                                     item.LastText = cmd;
-                                renderer.Draw(new IoTDisplayActionService.Draw
+                                renderer.Draw(new()
                                 {
                                     X = item.X,
                                     Y = item.Y,
@@ -219,7 +219,7 @@ namespace IoTDisplay.Common.Services
                             if (item.LastText == null || item.LastText != time.ToString(item.Format))
                             {
                                 item.LastText = time.ToString(item.Format);
-                                renderer.Text(new IoTDisplayActionService.Text
+                                renderer.Text(new()
                                 {
                                     X = item.X,
                                     Y = item.Y,
@@ -260,7 +260,7 @@ namespace IoTDisplay.Common.Services
                 {
                     case 'T':
                         if (item.LastText != null)
-                            renderer.Text(new IoTDisplayActionService.Text
+                            renderer.Text(new()
                             {
                                 X = item.X,
                                 Y = item.Y,
@@ -277,7 +277,7 @@ namespace IoTDisplay.Common.Services
                         break;
                     case 'I':
                     case 'D':
-                        renderer.Draw(new IoTDisplayActionService.Draw
+                        renderer.Draw(new()
                         {
                             X = item.X,
                             Y = item.Y,
@@ -299,20 +299,20 @@ namespace IoTDisplay.Common.Services
         protected internal class RenderCommand
         {
             public RenderCommand() { }
-            public char Type { get; set; }
-            public int X { get; set; }
-            public int Y { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public string Font { get; set; }
-            public float FontSize { get; set; }
-            public int FontWeight { get; set; }
-            public int FontWidth { get; set; }
-            public string HexColor { get; set; }
-            public string BackgroundColor { get; set; }
-            public string Format { get; set; }
-            public int HorizAlign { get; set; }
-            public int VertAlign { get; set; }
+            public char Type { get; init; }
+            public int X { get; init; }
+            public int Y { get; init; }
+            public int Width { get; init; }
+            public int Height { get; init; }
+            public string Font { get; init; }
+            public float FontSize { get; init; }
+            public int FontWeight { get; init; }
+            public int FontWidth { get; init; }
+            public string HexColor { get; init; }
+            public string BackgroundColor { get; init; }
+            public string Format { get; init; }
+            public int HorizAlign { get; init; }
+            public int VertAlign { get; init; }
             public string LastText { get; set; }
 
         }

@@ -97,7 +97,7 @@ namespace IoTDisplay.Common.Services
 
         private IDictionary<string, IoTDisplayClock> clocks;
 
-        private readonly object exportlock = new object();
+        private readonly object exportlock = new();
 
         #endregion Fields
 
@@ -113,7 +113,7 @@ namespace IoTDisplay.Common.Services
 
         protected virtual void OnScreenChanged(int x, int y, int width, int height, bool delay)
         {
-            ScreenChangedEventArgs evt = new ScreenChangedEventArgs(x, y, width, height, delay);
+            ScreenChangedEventArgs evt = new(x, y, width, height, delay);
             ScreenChanged?.Invoke(this, evt);
         }
 
@@ -125,28 +125,20 @@ namespace IoTDisplay.Common.Services
         {
             ScreenWidth = width;
             ScreenHeight = height;
-            switch (rotation)
+            ScreenRotation = rotation switch
             {
-                case 90:
-                    ScreenRotation = RotateFlipType.Rotate90FlipNone;
-                    break;
-                case 180:
-                    ScreenRotation = RotateFlipType.Rotate180FlipNone;
-                    break;
-                case 270:
-                    ScreenRotation = RotateFlipType.Rotate270FlipNone;
-                    break;
-                default:
-                    ScreenRotation = RotateFlipType.RotateNoneFlipNone;
-                    break;
-            }
+                90 => RotateFlipType.Rotate90FlipNone,
+                180 => RotateFlipType.Rotate180FlipNone,
+                270 => RotateFlipType.Rotate270FlipNone,
+                _ => RotateFlipType.RotateNoneFlipNone
+            };
             StateFolder = statefolder;
             if (!string.IsNullOrWhiteSpace(background) && SKColor.TryParse(background, out SKColor tempcolor))
                 BackgroundColor = background;
             if (!string.IsNullOrWhiteSpace(foreground) && SKColor.TryParse(foreground, out tempcolor))
                 ForegroundColor = foreground;
-            screen = new SKBitmap(width, height);
-            canvas = new SKCanvas(screen);
+            screen = new(width, height);
+            canvas = new(screen);
             canvas.Clear(SKColor.Parse(BackgroundColor));
             clocks = new Dictionary<string, IoTDisplayClock>();
             Import(true);
@@ -154,12 +146,12 @@ namespace IoTDisplay.Common.Services
 
         private Bitmap GetScreen(bool useRotation = true)
         {
-            using (MemoryStream memStream = new MemoryStream())
-            using (SKManagedWStream wstream = new SKManagedWStream(memStream))
+            using (MemoryStream memStream = new())
+            using (SKManagedWStream wstream = new(memStream))
             {
                 screen.Encode(wstream, SKEncodedImageFormat.Png, 100);
                 memStream.Position = 0;
-                Bitmap image = new Bitmap(memStream);
+                Bitmap image = new(memStream);
                 if (useRotation)
                     image.RotateFlip(ScreenRotation);
                 return image;
@@ -301,7 +293,7 @@ namespace IoTDisplay.Common.Services
             if (clocksecond > 48)
                 Thread.Sleep((61 - clocksecond) * 1000);
             foreach (KeyValuePair<string, IoTDisplayClock> clock in clocks)
-                DeleteClock(new IoTDisplayActionService.ClockDelete { Timezone = clock.Value.TimeZoneId });
+                DeleteClock(new() { Timezone = clock.Value.TimeZoneId });
             return this;
         }
 
@@ -322,7 +314,7 @@ namespace IoTDisplay.Common.Services
                 clocks.Remove(tzId);
             }
 
-            clocks.Add(tzId, new IoTDisplayClock(this, tzId, BackgroundColor, ""));
+            clocks.Add(tzId, new(this, tzId, BackgroundColor, ""));
             ExportClocks(false);
             return this;
         }
@@ -400,20 +392,14 @@ namespace IoTDisplay.Common.Services
             {
                 throw new ArgumentException("Invalid time format string", nameof(clockTime.Formatstring));
             }
-            SKPaint paint = null;
             try
             {
-                int hoffset, voffset;
-                (paint, width, height, hoffset, voffset) = GetPaint(clockTime.X, clockTime.Y, testtime, clockTime.HorizAlign, clockTime.VertAlign,
+                (_, width, height, _, _) = GetPaint(clockTime.X, clockTime.Y, testtime, clockTime.HorizAlign, clockTime.VertAlign,
                     clockTime.Font, clockTime.FontSize, clockTime.FontWeight, clockTime.FontWidth, clockTime.TextColor, true);
             }
             catch (ArgumentException)
             {
                 throw;
-            }
-            finally
-            {
-                paint.Dispose();
             }
 
             clocks[tzId].AddTime(clockTime, width, height);
@@ -453,9 +439,7 @@ namespace IoTDisplay.Common.Services
             {
                 try
                 {
-                    tzi = TZConvert.GetTimeZoneInfo(timezone);
-                    if (tzi == null)
-                        throw new ArgumentException("Time zone could not be found", nameof(timezone));
+                    tzi = TZConvert.GetTimeZoneInfo(timezone) ?? throw new ArgumentException("Time zone could not be found", nameof(timezone));
                 }
                 catch
                 {
@@ -463,26 +447,22 @@ namespace IoTDisplay.Common.Services
                 }
             }
             if (verifyExists && !clocks.ContainsKey(tzi.Id))
-            {
                 throw new ArgumentException("Clock not found for this time zone", nameof(timezone));
-            }
             return tzi.Id;
         }
 
         private SKBitmap GetImage(int x, int y, string filename)
         {
             SKBitmap img = null;
-            if (x < 0 || x > ScreenWidth)
+            if (x < 0 || x >= ScreenWidth)
                 throw new ArgumentOutOfRangeException(nameof(x), x, "X coordinate is not within the screen");
-            if (y < 0 || y > ScreenHeight)
+            if (y < 0 || y >= ScreenHeight)
                 throw new ArgumentOutOfRangeException(nameof(y), y, "Y coordinate is not within the screen");
             if (File.Exists(filename))
             {
                 try
                 {
-                    img = SKBitmap.Decode(filename);
-                    if (img == null)
-                        throw new ArgumentException("Unable to decode image", nameof(filename));
+                    img = SKBitmap.Decode(filename) ?? throw new ArgumentException("Unable to decode image", nameof(filename));
                 }
                 catch (Exception ex)
                 {
@@ -512,22 +492,20 @@ namespace IoTDisplay.Common.Services
                 svgCommands = ForegroundColor;
             if (SKColor.TryParse(svgCommands, out SKColor tempcolor))
                 svgCommands = "<rect width=\"" + width.ToString() + "\" height=\"" + height.ToString() + "\" fill=\"" + svgCommands + "\" />";
-            byte[] fullSVG = Encoding.UTF8.GetBytes("<svg version=\"1.2\" baseProfile=\"full\" width=\"" + width.ToString() + "\" height=\"" + 
+            byte[] fullSVG = Encoding.UTF8.GetBytes("<svg version=\"1.2\" baseProfile=\"full\" width=\"" + width.ToString() + "\" height=\"" +
                 height.ToString() + "\" " + "xmlns=\"http://www.w3.org/2000/svg\">" + svgCommands + "</svg>");
             SKImage img;
             try
             {
-                SKSvg svg = new SKSvg();
-                using (MemoryStream stream = new MemoryStream(fullSVG))
+                SKSvg svg = new();
+                using (MemoryStream stream = new(fullSVG))
                 using (SKPicture pict = svg.Load(stream))
                 {
-                    SKSizeI dimen = new SKSizeI(
+                    SKSizeI dimen = new(
                         (int)Math.Ceiling(pict.CullRect.Width),
                         (int)Math.Ceiling(pict.CullRect.Height)
                     );
-                    img = SKImage.FromPicture(pict, dimen, SKMatrix.CreateScale(1, 1));
-                    if (img == null)
-                        throw new ArgumentException("Invalid SVG command", nameof(svgCommands));
+                    img = SKImage.FromPicture(pict, dimen, SKMatrix.CreateScale(1, 1)) ?? throw new ArgumentException("Invalid SVG command", nameof(svgCommands));
                     stream.Close();
                 }
             }
@@ -538,8 +516,8 @@ namespace IoTDisplay.Common.Services
             return img;
         }
 
-        private (SKPaint, int, int, int, int) GetPaint(int x, int y, string text, int horizAlign, int vertAlign, string font, float fontSize,
-            int fontWeight, int fontWidth, string hexColor, bool bold)
+        private (SKPaint paint, int width, int height, int hoffset, int voffset) GetPaint(int x, int y, string text, int horizAlign, int vertAlign, 
+            string font, float fontSize, int fontWeight, int fontWidth, string hexColor, bool bold)
         {
             if (x < 0 || x >= ScreenWidth)
                 throw new ArgumentOutOfRangeException(nameof(x), x, "X coordinate is not within the screen");
@@ -555,24 +533,18 @@ namespace IoTDisplay.Common.Services
                 throw new ArgumentOutOfRangeException(nameof(fontWeight), fontWeight, "Font weight must be between 100 and 900");
             if (fontWidth < 0 || fontWidth > 9)
                 throw new ArgumentOutOfRangeException(nameof(fontWidth), fontWidth, "Font width must be between 1 and to 9");
-            SKPaint paint = new SKPaint
+            SKPaint paint = new()
             {
                 TextSize = fontSize,
                 IsAntialias = true,
             };
             if (!string.IsNullOrWhiteSpace(font))
             {
-                using (SKTypeface typeface = GetTypeface(font, fontWeight, fontWidth))
-                {
-                    if (typeface == null)
-                        throw new ArgumentException("Font not found", nameof(font));
-                    else
-                        paint.Typeface = typeface;
-                }
+                paint.Typeface = GetTypeface(font, fontWeight, fontWidth) ?? throw new ArgumentException("Font not found", nameof(font));
             }
             if (string.IsNullOrWhiteSpace(hexColor))
             {
-                paint.Color = new SKColor(0, 0, 0);
+                paint.Color = new(0, 0, 0);
             }
             else
             {
@@ -587,7 +559,7 @@ namespace IoTDisplay.Common.Services
             }
             paint.FakeBoldText = bold;
             paint.IsStroke = false;
-            SKRect bound = new SKRect();
+            SKRect bound = new();
             float width = paint.MeasureText(text, ref bound);
             float height = bound.Height;
             float hoffset;
@@ -637,7 +609,7 @@ namespace IoTDisplay.Common.Services
         {
             string filepath = StateFolder + "IoTDisplayClock-" + CleanFileName(TimeZoneId) + ".json";
 
-            using (FileStream fs = new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            using (FileStream fs = new(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
                 fs.Write(Encoding.UTF8.GetBytes(clocks[TimeZoneId].ToString()));
         }
 
@@ -645,7 +617,7 @@ namespace IoTDisplay.Common.Services
         {
             string filepath = StateFolder + "IoTDisplayClocks.txt";
 
-            using (FileStream fs = new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            using (FileStream fs = new(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 foreach (KeyValuePair<string, IoTDisplayClock> clock in clocks)
                 {
@@ -695,14 +667,14 @@ namespace IoTDisplay.Common.Services
                 bool updated = false;
                 if (File.Exists(screenpath))
                 {
-                    AddImage(new IoTDisplayActionService.Image { X = 0, Y = 0, Filename = screenpath, Delay = true }, false);
+                    AddImage(new() { X = 0, Y = 0, Filename = screenpath, Delay = true }, false);
                     Console.WriteLine("Previous screen restored");
                     updated = true;
                 }
                 if (File.Exists(commandpath))
                     using (StreamReader sr = File.OpenText(commandpath))
                     {
-                        JsonSerializerOptions options = new JsonSerializerOptions { AllowTrailingCommas = true };
+                        JsonSerializerOptions options = new() { AllowTrailingCommas = true };
                         string command = "";
                         while ((command = sr.ReadLine()) != null)
                         {
@@ -741,7 +713,7 @@ namespace IoTDisplay.Common.Services
                             if (File.Exists(filepath))
                                 json = File.ReadAllText(filepath, Encoding.UTF8);
                             Console.WriteLine("Adding clock " + clock + " with state: " + json);
-                            clocks.Add(clock, new IoTDisplayClock(this, clock, BackgroundColor, json));
+                            clocks.Add(clock, new(this, clock, BackgroundColor, json));
                         }
                     }
                 if (updated)
@@ -755,7 +727,7 @@ namespace IoTDisplay.Common.Services
                         execpath = execpath.Substring(5);
                     execpath = execpath.Trim('/').Trim('\\') + "/splash.png";
                     if (File.Exists(execpath))
-                        AddImage(new IoTDisplayActionService.Image { X = 0, Y = 0, Filename = execpath, Delay = false }, false);
+                        AddImage(new() { X = 0, Y = 0, Filename = execpath, Delay = false }, false);
                 }
             }
         }

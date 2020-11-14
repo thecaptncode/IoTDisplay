@@ -26,7 +26,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -54,11 +53,11 @@ namespace IoTDisplay.Common
             byte[] reasonBytes = null;
             try
             {
-                using (HttpClient httpClient = new HttpClient())
-                using (HttpRequestMessage request = new HttpRequestMessage(method, baseURL + uri))
+                using (HttpClient httpClient = new())
+                using (HttpRequestMessage request = new(method, baseURL + uri))
                 {
                     request.Content = new ByteArrayContent(document);
-                    request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    request.Content.Headers.ContentType = new("application/json");
                     using (HttpResponseMessage response = await httpClient.SendAsync(request))
                     {
                         responseBytes = await response.Content.ReadAsByteArrayAsync();

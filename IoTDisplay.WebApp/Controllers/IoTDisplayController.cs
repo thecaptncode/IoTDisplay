@@ -77,7 +77,7 @@ namespace IoTDisplay.WebApp.Controllers
         public ActionResult<Bitmap> Screen()
         {
             Bitmap screen = ioTDisplayService.Renderer.Screen;
-            MemoryStream str = new MemoryStream();
+            MemoryStream str = new();
             screen.Save(str, ImageFormat.Png);
             str.Position = 0;
             return File(str, "image/png");

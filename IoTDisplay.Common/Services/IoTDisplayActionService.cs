@@ -339,16 +339,18 @@ namespace IoTDisplay.Common
             /// <summary>
             /// Text horizontal alignment (-1 = Left, 0 = Center, 1 = Right, optional)
             /// </summary>
-            /// <example>Center</example>
+            /// <example>0</example>
+            [DefaultValue(0)]
             [Option("-h|--horizalign", CommandOptionType.SingleValue, Description = "Text horizontal alignment")]
-            public int HorizAlign { get; set; }
+            public int HorizAlign { get; set; } = 0;
 
             /// <summary>
             /// Text vertical alignment (-1 = Top, 0 = Middle, 1 = Bottom, optional)
             /// </summary>
-            /// <example>Center</example>
+            /// <example>0</example>
+            [DefaultValue(0)]
             [Option("-v|--vertalign", CommandOptionType.SingleValue, Description = "Text vertical alignment")]
-            public int VertAlign { get; set; }
+            public int VertAlign { get; set; } = 0;
 
             /// <summary>
             /// Filename or font family of the font to use (optional)
@@ -361,13 +363,15 @@ namespace IoTDisplay.Common
             /// Font size of the text (optional)
             /// </summary>
             /// <example>60</example>
+            [DefaultValue(32)]
             [Option("-s|--fontsize", CommandOptionType.SingleValue, Description = "Font size of the text (optional)")]
-            public float FontSize { get; set; }
+            public float FontSize { get; set; } = 32;
 
             /// <summary>
             /// Font weight of the text (100 - 900, optional)
             /// </summary>
             /// <example>400</example>
+            [DefaultValue(400)]
             [Option("-fe|--fontweight", CommandOptionType.SingleValue, Description = "Font weight of the text (100 - 900, optional)")]
             public int FontWeight { get; set; } = 400;
 
@@ -375,6 +379,7 @@ namespace IoTDisplay.Common
             /// Font width of the text (1 - 9, optional)
             /// </summary>
             /// <example>5</example>
+            [DefaultValue(5)]
             [Option("-fi|--fontwidth", CommandOptionType.SingleValue, Description = "Font width of the text (1 - 9, optional)")]
             public int FontWidth { get; set; } = 5;
 
@@ -382,8 +387,9 @@ namespace IoTDisplay.Common
             /// Hex color string representing the color of the text (optional)
             /// </summary>
             /// <example>#000000</example>
+            [DefaultValue("#000000")]
             [Option("-c|--hexcolor", CommandOptionType.SingleValue, Description = "Hex color string representing the color of the text (optional)")]
-            public string HexColor { get; set; }
+            public string HexColor { get; set; } = "#000000";
 
             /// <summary>
             /// Delay screen update (optional)
@@ -564,22 +570,25 @@ namespace IoTDisplay.Common
             /// Date/Time format string (optional). This is a dotnet standard or custom DateTime format string.
             /// </summary>
             /// <example>ddd MM/dd/yy h:mm tt</example>
+            [DefaultValue("t")]
             [Option("-t|--formatstring", CommandOptionType.SingleValue, Description = "Date/Time format string (optional)")]
-            public string Formatstring { get; set; }
+            public string Formatstring { get; set; } = "t";
 
             /// <summary>
             /// Time text horizontal alignment (-1 = Left, 0 = Center, 1 = Right, optional)
             /// </summary>
             /// <example>0</example>
+            [DefaultValue(0)]
             [Option("-h|--horizalign", CommandOptionType.SingleValue, Description = "Time text horizontal alignment")]
-            public int HorizAlign { get; set; }
+            public int HorizAlign { get; set; } = 0;
 
             /// <summary>
             /// Time text vertical alignment (-1 = Top, 0 = Middle, 1 = Bottom, optional)
             /// </summary>
             /// <example>0</example>
+            [DefaultValue(0)]
             [Option("-v|--vertalign", CommandOptionType.SingleValue, Description = "Time text vertical alignment")]
-            public int VertAlign { get; set; }
+            public int VertAlign { get; set; } = 0;
 
             /// <summary>
             /// Filename or font family of the font to use (optional)
@@ -592,13 +601,15 @@ namespace IoTDisplay.Common
             /// Font size of the time (optional)
             /// </summary>
             /// <example>60</example>
+            [DefaultValue(32)]
             [Option("-s|--fontsize", CommandOptionType.SingleValue, Description = "Font size of the time (optional)")]
-            public float FontSize { get; set; }
+            public float FontSize { get; set; } = 32;
 
             /// <summary>
             /// Font weight of the time (100 - 900, optional)
             /// </summary>
             /// <example>400</example>
+            [DefaultValue(400)]
             [Option("-fe|--fontweight", CommandOptionType.SingleValue, Description = "Font weight of the time (100 - 900, optional)")]
             public int FontWeight { get; set; } = 400;
 
@@ -606,6 +617,7 @@ namespace IoTDisplay.Common
             /// Font width of the time (1 - 9, optional)
             /// </summary>
             /// <example>5</example>
+            [DefaultValue(5)]
             [Option("-fi|--fontwidth", CommandOptionType.SingleValue, Description = "Font width of the time (1 - 9, optional)")]
             public int FontWidth { get; set; } = 5;
 
@@ -613,8 +625,9 @@ namespace IoTDisplay.Common
             /// Hex color string representing the color of the time (optional)
             /// </summary>
             /// <example>#000000</example>
+            [DefaultValue("#000000")]
             [Option("-tc|--textcolor", CommandOptionType.SingleValue, Description = "Hex color string representing the color of the time (optional)")]
-            public string TextColor { get; set; }
+            public string TextColor { get; set; } = "#000000";
 
             /// <summary>
             /// HexColor to use for the clock's background (optional). This is used to erase the previous time.

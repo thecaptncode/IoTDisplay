@@ -57,7 +57,7 @@ namespace IoTDisplay.WebApp.Controllers
 
         #region GET
         /// <summary>
-        /// Returns the current screen as a image
+        /// Returns the current screen as a png image
         /// </summary>
         /// <remarks>
         /// Sample request:
@@ -448,7 +448,7 @@ namespace IoTDisplay.WebApp.Controllers
         ///         "y": 100,
         ///         "width": 300,
         ///         "height": 200,
-        ///         "svgCommands": '<circle cx="150" cy="100" r="80" fill="green" /><text x="150" y="120" font-size="60" text-anchor="middle" fill="white">SVG</text>'
+        ///         "svgCommands": '<circle cx="150" cy="100" r="80" fill="green" /><text x="150" y="120" font-size="60" text-anchor="middle" fill="white">{0:ddd MM/dd/yy h:mm tt}</text>'
         ///     }
         /// 
         /// </remarks>

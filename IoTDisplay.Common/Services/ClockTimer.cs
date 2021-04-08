@@ -1,32 +1,30 @@
 ﻿#region Copyright
-
 // --------------------------------------------------------------------------
-// Copyright 2020 Greg Cannon
-// 
+// Copyright 2021 Greg Cannon
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // --------------------------------------------------------------------------
-
 #endregion Copyright
-
-#region Using
-
-using System;
-using System.Timers;
-
-#endregion Using
 
 namespace IoTDisplay.Common.Services
 {
+    #region Using
+
+    using System;
+    using System.Timers;
+
+    #endregion Using
+
     public class ClockTimer : Timer
     {
         #region Properties
@@ -46,12 +44,15 @@ namespace IoTDisplay.Common.Services
             set
             {
                 if (value)
+                {
                     SetInterval();
+                }
+
                 base.Enabled = value;
             }
         }
 
-        public double TimeLeft => (dueTime - DateTime.Now).TotalMilliseconds;
+        public double TimeLeft => (_dueTime - DateTime.Now).TotalMilliseconds;
 
         #endregion Properties
 
@@ -67,13 +68,14 @@ namespace IoTDisplay.Common.Services
 
         #region Fields
 
-        private DateTime dueTime;
+        private DateTime _dueTime;
 
         #endregion Fields
 
         #region Constructor / Dispose / Finalizer
 
-        public ClockTimer() : base()
+        public ClockTimer()
+            : base()
         {
             AutoReset = true;
             TargetTime = default;
@@ -97,7 +99,7 @@ namespace IoTDisplay.Common.Services
         {
             DateTime time = DateTime.Now;
             int next;
-            // Calculate how long to wait for the next interval, shooting for the target 
+            // Calculate how long to wait for the next interval, shooting for the target
             // millisecond mark but not less than tolerance millisecond due to display update time.
             if (TargetTime == default)
             {
@@ -108,30 +110,43 @@ namespace IoTDisplay.Common.Services
                     targetminute = TargetMillisecond / 60000;
                     targetsecond = TargetMillisecond % 60000;
                 }
+
                 next = targetsecond - (time.Second * 1000 + time.Millisecond);
                 if (next <= ToleranceMillisecond)
+                {
                     next += 60000;
+                }
+
                 if (targetminute > 0)
+                {
                     next += (targetminute - (time.AddMilliseconds(next).Minute % targetminute)) * 60000;
+                }
             }
-            // Calculate how long to wait for the next interval, shooting for the reset time 
+
+            // Calculate how long to wait for the next interval, shooting for the reset time
             // but not less than tolerance millisecond due to display update time.
             else
             {
                 next = (int)((TargetTime - time.TimeOfDay).TotalMilliseconds);
                 if (next <= ToleranceMillisecond)
+                {
                     next += 24 * 60 * 60000;
+                }
             }
 
             // Update the interval to prevent clock drift
             Interval = next;
-            dueTime = time.AddMilliseconds(next);
+            _dueTime = time.AddMilliseconds(next);
+            // if (next > 60000)
+            //     Console.WriteLine($"Timer interval {Interval.ToString()} due {dueTime.ToString()}");
         }
 
         private void ElapsedAction(object sender, ElapsedEventArgs e)
         {
             if (AutoReset)
+            {
                 SetInterval();
+            }
         }
         #endregion Methods (Private)
     }

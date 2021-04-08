@@ -1,46 +1,45 @@
 ﻿#region Copyright
-
 // --------------------------------------------------------------------------
-// Copyright 2020 Greg Cannon
-// 
+// Copyright 2021 Greg Cannon
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // --------------------------------------------------------------------------
-
 #endregion Copyright
-
-#region Using
-
-using McMaster.Extensions.CommandLineUtils;
-using System;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-
-#endregion Using
 
 namespace IoTDisplay.Common
 {
+    #region Using
+
+    using System;
+    using System.ComponentModel;
+    using System.ComponentModel.DataAnnotations;
+    using System.IO;
+    using System.Net.Http;
+    using System.Text;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using McMaster.Extensions.CommandLineUtils;
+
+    #endregion Using
+
     public class IoTDisplayActionService
     {
-        const string baseURL = "http://localhost:5000/api/IoTDisplay/";
+        private const string BaseURL = "http://localhost:5000/api/IoTDisplay/";
 
         #region Methods (Private)
+
         /// <summary>
-        /// Sent HTTP post 
+        /// Sent HTTP post
         /// </summary>
         /// <param name="method">HTTP Method to use</param>
         /// <param name="uri">URI to send to</param>
@@ -53,28 +52,33 @@ namespace IoTDisplay.Common
             byte[] reasonBytes = null;
             try
             {
-                using (HttpClient httpClient = new())
-                using (HttpRequestMessage request = new(method, baseURL + uri))
+                using HttpClient httpClient = new ();
+                using HttpRequestMessage request = new (method, BaseURL + uri);
+                request.Content = new ByteArrayContent(document);
+                request.Content.Headers.ContentType = new ("application/json");
+                using HttpResponseMessage response = await httpClient.SendAsync(request);
+                responseBytes = await response.Content.ReadAsByteArrayAsync();
+                if (response.ReasonPhrase.Length > 0)
                 {
-                    request.Content = new ByteArrayContent(document);
-                    request.Content.Headers.ContentType = new("application/json");
-                    using (HttpResponseMessage response = await httpClient.SendAsync(request))
-                    {
-                        responseBytes = await response.Content.ReadAsByteArrayAsync();
-                        if (response.ReasonPhrase.Length > 0)
-                            reasonBytes = Encoding.UTF8.GetBytes(response.ReasonPhrase + Environment.NewLine);
-                        response.EnsureSuccessStatusCode();
-                    }
+                    reasonBytes = Encoding.UTF8.GetBytes(response.ReasonPhrase + Environment.NewLine);
                 }
+
+                response.EnsureSuccessStatusCode();
             }
             catch (HttpRequestException ex)
             {
                 byte[] errorBytes = Encoding.UTF8.GetBytes(ex.ToString() + Environment.NewLine);
                 int len = errorBytes.Length;
                 if (responseBytes != null)
+                {
                     len += responseBytes.Length;
+                }
+
                 if (reasonBytes != null)
+                {
                     len += reasonBytes.Length;
+                }
+
                 byte[] bytes = new byte[len];
                 len = 0;
                 if (responseBytes != null)
@@ -82,11 +86,13 @@ namespace IoTDisplay.Common
                     Buffer.BlockCopy(reasonBytes, 0, bytes, len, reasonBytes.Length);
                     len += reasonBytes.Length;
                 }
+
                 if (responseBytes != null)
                 {
                     Buffer.BlockCopy(responseBytes, 0, bytes, len, responseBytes.Length);
                     len += responseBytes.Length;
                 }
+
                 Buffer.BlockCopy(errorBytes, 0, bytes, len, errorBytes.Length);
                 responseBytes = bytes;
                 exitCode = 4;
@@ -98,13 +104,16 @@ namespace IoTDisplay.Common
             }
 
             if (responseBytes.Length == 0 && exitCode == 0 && reasonBytes != null)
+            {
                 responseBytes = reasonBytes;
+            }
 
             return new Response { Result = responseBytes, ExitCode = exitCode };
         }
         #endregion Methods (Private)
 
         #region Subclasses
+#pragma warning disable IDE0051 // Remove unused private members
 
         /// <summary>
         /// Response from HTTP attempt
@@ -132,11 +141,16 @@ namespace IoTDisplay.Common
 
             private async Task<int> OnExecuteAsync(IConsole console)
             {
-                Response response = await RespondWith(HttpMethod.Get, "", new byte[] { });
+                Response response = await RespondWith(HttpMethod.Get, string.Empty, Array.Empty<byte>());
                 if (response.ExitCode == 0)
+                {
                     File.WriteAllBytes(Filename, response.Result);
+                }
                 else
+                {
                     console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
+                }
+
                 return response.ExitCode;
             }
         }
@@ -147,9 +161,10 @@ namespace IoTDisplay.Common
         [Command("lastupdated", Description = "Gets the last date and time the screen was updated")]
         public class LastUpdated
         {
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
             private async Task<int> OnExecuteAsync(IConsole console)
             {
-                Response response = await RespondWith(HttpMethod.Get, "LastUpdated", new byte[] { });
+                Response response = await RespondWith(HttpMethod.Get, "LastUpdated", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -161,9 +176,10 @@ namespace IoTDisplay.Common
         [Command("refresh", Description = "Refreshes the screen")]
         public class Refresh
         {
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
             private async Task<int> OnExecuteAsync(IConsole console)
             {
-                Response response = await RespondWith(HttpMethod.Get, "Refresh", new byte[] { });
+                Response response = await RespondWith(HttpMethod.Get, "Refresh", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -175,9 +191,10 @@ namespace IoTDisplay.Common
         [Command("clear", Description = "Clears the screen of everything but clocks")]
         public class Clear
         {
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
             private async Task<int> OnExecuteAsync(IConsole console)
             {
-                Response response = await RespondWith(HttpMethod.Get, "Clear", new byte[] { });
+                Response response = await RespondWith(HttpMethod.Get, "Clear", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -189,9 +206,10 @@ namespace IoTDisplay.Common
         [Command("clockclear", Description = "Clears the screen of all clocks")]
         public class ClockClear
         {
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
             private async Task<int> OnExecuteAsync(IConsole console)
             {
-                Response response = await RespondWith(HttpMethod.Get, "ClockClear", new byte[] { });
+                Response response = await RespondWith(HttpMethod.Get, "ClockClear", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -282,8 +300,8 @@ namespace IoTDisplay.Common
             public int Height { get; set; }
 
             /// <summary>
-            /// SVG command(s) used to draw the image or hexColor of square. You can supply one or more SVG drawing commands. Within the SVG, sizes must be actual 
-            /// and not percentage based and the X, Y coordinates are relative to the drawing area. Alternatively, a hexadecimal color string can be used 
+            /// SVG command(s) used to draw the image or hexColor of square. You can supply one or more SVG drawing commands. Within the SVG, sizes must be actual
+            /// and not percentage based and the X, Y coordinates are relative to the drawing area. Alternatively, a hexadecimal color string can be used
             /// for a solid fill of the rectangle, with or without a preceding '#' character formatted like: AARRGGB, RRGGBB, ARGB or RGB.
             /// </summary>
             /// <example><circle cx="150" cy="100" r="80" fill="green" /> <text x="150" y="120" font-size="60" text-anchor="middle" fill="white">SVG</text></example>
@@ -519,9 +537,9 @@ namespace IoTDisplay.Common
             public int Height { get; set; }
 
             /// <summary>
-            /// SVG command(s) used to draw the image or hexColor of square. You can supply one or more SVG drawing commands. Within the SVG, sizes must be actual 
-            /// and not percentage based and the X, Y coordinates are relative to the drawing area.  You can also embed a dotnet standard or custom DateTime format 
-            /// string in your SVG as a format string (example provided). Alternatively, a hexadecimal color string can be used for a solid fill of the rectangle, 
+            /// SVG command(s) used to draw the image or hexColor of square. You can supply one or more SVG drawing commands. Within the SVG, sizes must be actual
+            /// and not percentage based and the X, Y coordinates are relative to the drawing area.  You can also embed a dotnet standard or custom DateTime format
+            /// string in your SVG as a format string (example provided). Alternatively, a hexadecimal color string can be used for a solid fill of the rectangle,
             /// with or without a preceding '#' character formatted like: AARRGGB, RRGGBB, ARGB or RGB.
             /// </summary>
             /// <example><circle cx="150" cy="100" r="80" fill="green" />
@@ -665,6 +683,7 @@ namespace IoTDisplay.Common
             }
         }
 
+#pragma warning restore IDE0051 // Remove unused private members
         #endregion Subclasses
     }
 }

@@ -1,145 +1,138 @@
 ﻿#region Copyright
-
 // --------------------------------------------------------------------------
-// Copyright 2020 Greg Cannon
-// 
+// Copyright 2021 Greg Cannon
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // --------------------------------------------------------------------------
-
 #endregion Copyright
-
-#region Using
-
-using System;
-using System.Drawing;
-using System.Timers;
-using Waveshare;
-using Waveshare.Devices;
-using Waveshare.Interfaces;
-
-#endregion Using
 
 namespace IoTDisplay.Common.Services
 {
+    #region Using
+
+    using System;
+    using System.IO;
+    using System.Timers;
+    using Waveshare;
+    using Waveshare.Devices;
+    using Waveshare.Interfaces;
+
+    #endregion Using
+
     public class IoTDisplayService : IIoTDisplayService
     {
         #region Properties
 
-        public IIoTDisplayRenderService Renderer { get; }
+        public IIoTDisplayRenderService Renderer { get; init; }
+
+        public IoTDisplayRenderSettings Settings { get; init; }
+
+        public TimeSpan RefreshTime { get; init; }
 
         public string DriverName { get; }
 
-        public int ScreenWidth { get; }
-
-        public int ScreenHeight { get; }
-
-        public int ScreenRotation { get; }
-
-        public TimeSpan RefreshTime { get; }
-
-        public DateTime LastUpdated { get => lastUpdated; }
+        public DateTime LastUpdated { get => _lastUpdated; }
 
         #endregion Properties
 
         #region Methods (Public)
 
-
         #endregion Methods (Public)
 
         #region Fields
 
-        private readonly IEPaperDisplay display;
-        private readonly object updatelock = new();
-        private static ClockTimer UpdateTimer;
-        private static ClockTimer RefreshTimer;
-        private DateTime lastUpdated;
-        private bool updating = false;
-        private bool delayed = false;
+        private static ClockTimer _updateTimer;
+        private static ClockTimer _refreshTimer;
+        private readonly IEPaperDisplay _display;
+        private readonly object _updatelock = new ();
+        private DateTime _lastUpdated;
+        private bool _updating = false;
+        private bool _delayed = false;
 
         #endregion Fields
 
         #region Constructor / Dispose / Finalizer
 
-        public IoTDisplayService(EPaperDisplayType driver, IIoTDisplayRenderService renderer, int rotation,
-            string statefolder, string background, string foreground, TimeSpan refreshtime)
+        public IoTDisplayService(EPaperDisplayType driver, IIoTDisplayRenderService renderer, IoTDisplayRenderSettings settings, TimeSpan refreshtime)
         {
             DriverName = driver.ToString();
-            display = EPaperDisplay.Create(driver);
-            ScreenRotation = rotation;
+            _display = EPaperDisplay.Create(driver);
             RefreshTime = refreshtime;
-            if (display == null)
+            if (_display == null)
             {
-                ScreenWidth = 800;
-                ScreenHeight = 480;
+                Settings = settings;
             }
             else
             {
-                ScreenWidth = display.Width;
-                ScreenHeight = display.Height;
-                display.Clear();
-                display.PowerOff();
+                Settings = new IoTDisplayRenderSettings()
+                {
+                    Width = _display.Width,
+                    Height = _display.Height,
+                    Rotation = settings.Rotation,
+                    Statefolder = settings.Statefolder,
+                    Background = settings.Background,
+                    Foreground = settings.Foreground
+                };
+                _display.Clear();
+                _display.PowerOff();
             }
-            if (rotation == 90 || rotation == 270)
-            {
-                int tempwidth = ScreenWidth;
-                ScreenWidth = ScreenHeight;
-                ScreenHeight = tempwidth;
-            }
+
             Renderer = renderer;
             renderer.ScreenChanged += Renderer_ScreenChanged;
-            UpdateTimer = new()
+            _updateTimer = new ()
             {
                 TargetMillisecond = 300000,
                 ToleranceMillisecond = 5000,
                 Enabled = true
             };
-            UpdateTimer.Elapsed += UpdateScreen;
-            lastUpdated = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            renderer.Create(ScreenWidth, ScreenHeight, ScreenRotation, statefolder, background, foreground);
-            if (display != null && refreshtime != default)
+            _updateTimer.Elapsed += UpdateScreen;
+            _lastUpdated = new (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            renderer.Create(Settings);
+            if (_display != null && refreshtime != default)
             {
-                RefreshTimer = new()
+                _refreshTimer = new ()
                 {
                     TargetTime = refreshtime,
                     ToleranceMillisecond = 180000,
                     Enabled = true
                 };
-                RefreshTimer.Elapsed += RefreshScreen;
+                _refreshTimer.Elapsed += RefreshScreen;
             }
         }
-
 
         /// <summary>
         /// Finalizer
         /// </summary>
         ~IoTDisplayService()
         {
-            if (display != null)
+            if (_display != null)
             {
-                if (UpdateTimer != null)
+                if (_updateTimer != null)
                 {
-                    UpdateTimer.Elapsed -= UpdateScreen;
-                    UpdateTimer.Enabled = false;
-                    UpdateTimer.Dispose();
+                    _updateTimer.Elapsed -= UpdateScreen;
+                    _updateTimer.Enabled = false;
+                    _updateTimer.Dispose();
                 }
-                if (RefreshTimer != null)
+
+                if (_refreshTimer != null)
                 {
-                    RefreshTimer.Elapsed -= RefreshScreen;
-                    RefreshTimer.Enabled = false;
-                    RefreshTimer.Dispose();
+                    _refreshTimer.Elapsed -= RefreshScreen;
+                    _refreshTimer.Enabled = false;
+                    _refreshTimer.Dispose();
                 }
-                display.Sleep();
-                display.Dispose();
+
+                _display.Sleep();
+                _display.Dispose();
             }
         }
 
@@ -147,34 +140,29 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Private)
 
-        private DateTime GetLastUpdated()
-        {
-            return lastUpdated;
-        }
-
         private void Renderer_ScreenChanged(object sender, EventArgs e)
         {
-            if (display == null)
+            if (_display == null)
             {
-                lastUpdated = DateTime.UtcNow;
+                _lastUpdated = DateTime.UtcNow;
             }
             else
             {
                 ScreenChangedEventArgs args = (ScreenChangedEventArgs)e;
-                lock (updatelock)
+                lock (_updatelock)
                 {
-                    if (!updating)
+                    if (!_updating)
                     {
                         if (args.Delay)
                         {
-                            delayed = true;
+                            _delayed = true;
                         }
                         else
                         {
-                            // Factor in rotation and accumulate ** TODO **
+                            // Factor in rotation, isportrait and accumulate ** TODO **
                             // Math.Min(args.Width, ScreenWidth - args.X), Math.Min(args.Height, ScreenHeight - args.Y) ** TODO **
-                            updating = true;
-                            UpdateTimer.Interval = 5000;
+                            _updating = true;
+                            _updateTimer.Interval = 5000;
                         }
                     }
                 }
@@ -183,23 +171,26 @@ namespace IoTDisplay.Common.Services
 
         private void UpdateScreen(Object source, ElapsedEventArgs e)
         {
-            if (delayed || updating)
-                lock (display)
+            if (_delayed || _updating)
+            {
+                lock (_display)
                 {
-                    Bitmap bitmap = null;
-                    lock (updatelock)
+                    Stream memStream = null;
+                    lock (_updatelock)
                     {
-                        bitmap = Renderer.Screen;
-                        updating = false;
-                        delayed = false;
+                        memStream = Renderer.Screen;
+                        _updating = false;
+                        _delayed = false;
                     }
-                    // Handle if partial update ** TODO **
-                    display.PowerOn();
-                    display.DisplayImage(bitmap);
-                    display.PowerOff();
-                    bitmap.Dispose();
-                    lastUpdated = DateTime.UtcNow;
+
+                    _display.PowerOn();
+                    _display.DisplayImage(new (memStream));
+                    _display.PowerOff();
+                    memStream.Close();
+                    memStream.Dispose();
+                    _lastUpdated = DateTime.UtcNow;
                 }
+            }
         }
 
         private void RefreshScreen(Object source, ElapsedEventArgs e)
@@ -207,16 +198,17 @@ namespace IoTDisplay.Common.Services
             // Screen flushing.  Cycle three times:
             //   Color: black, white, white, black, white, white
             //   Monochrome: black, white
-            lock (display)
+            lock (_display)
             {
-                display.PowerOn();
+                _display.PowerOn();
                 for (int i = 0; i < 6; i++)
                 {
                     Console.WriteLine("Flushing screen");
-                    display.ClearBlack();
-                    display.Clear();
+                    _display.ClearBlack();
+                    _display.Clear();
                 }
-                display.PowerOff();
+
+                _display.PowerOff();
                 Console.WriteLine("Finished flushing screen");
                 Renderer.Refresh();
             }

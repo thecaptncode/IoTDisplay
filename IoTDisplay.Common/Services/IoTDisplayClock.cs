@@ -1,34 +1,32 @@
 ﻿#region Copyright
-
 // --------------------------------------------------------------------------
-// Copyright 2020 Greg Cannon
-// 
+// Copyright 2021 Greg Cannon
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // --------------------------------------------------------------------------
-
 #endregion Copyright
-
-#region Using
-
-using System;
-using System.Collections.Generic;
-using System.Text.Json;
-
-#endregion Using
 
 namespace IoTDisplay.Common.Services
 {
-    class IoTDisplayClock : IDisposable
+    #region Using
+
+    using System;
+    using System.Collections.Generic;
+    using System.Text.Json;
+
+    #endregion Using
+
+    public class IoTDisplayClock : IDisposable
     {
         #region Properties
 
@@ -40,7 +38,7 @@ namespace IoTDisplay.Common.Services
 
         public void AddImage(IoTDisplayActionService.ClockImage clockImage, int width, int height)
         {
-            RenderCommand cmd = new()
+            RenderCommand cmd = new ()
             {
                 Type = 'I',
                 X = clockImage.X,
@@ -49,12 +47,12 @@ namespace IoTDisplay.Common.Services
                 Height = height,
                 Format = clockImage.Filename
             };
-            commandlist.Add(cmd);
+            _commandlist.Add(cmd);
         }
 
         public void AddDraw(IoTDisplayActionService.ClockDraw clockDraw)
         {
-            RenderCommand cmd = new()
+            RenderCommand cmd = new ()
             {
                 Type = 'D',
                 X = clockDraw.X,
@@ -63,12 +61,12 @@ namespace IoTDisplay.Common.Services
                 Height = clockDraw.Height,
                 HexColor = clockDraw.SvgCommands
             };
-            commandlist.Add(cmd);
+            _commandlist.Add(cmd);
         }
 
         public void AddTime(IoTDisplayActionService.ClockTime clockTime, int width, int height)
         {
-            RenderCommand cmd = new()
+            RenderCommand cmd = new ()
             {
                 Type = 'T',
                 X = clockTime.X,
@@ -85,51 +83,52 @@ namespace IoTDisplay.Common.Services
                 Width = width,
                 Height = height
             };
-            commandlist.Add(cmd);
+            _commandlist.Add(cmd);
         }
 
         public override string ToString()
         {
-            return JsonSerializer.Serialize<List<RenderCommand>>(commandlist);
+            return JsonSerializer.Serialize<List<RenderCommand>>(_commandlist);
         }
 
         #endregion Methods (Public)
 
         #region Fields
+        private static ClockTimer _tickTimer;
+        private readonly IIoTDisplayRenderService _renderer;
+        private readonly List<RenderCommand> _commandlist;
+        private readonly string _screenBackgroundColor;
         private bool _disposed = false;
-        private bool hasDrawn = false;
-        private static ClockTimer TickTimer;
-        private readonly IIoTDisplayRenderService renderer;
-        private readonly List<RenderCommand> commandlist;
-        private readonly string ScreenBackgroundColor;
+        private bool _hasDrawn = false;
 
         #endregion Fields
 
         #region Constructor / Dispose / Finalizer
         public IoTDisplayClock(IIoTDisplayRenderService renderer, string timezoneID, string screenbackground, string commands)
         {
-            this.renderer = renderer;
-            this.TimeZoneId = timezoneID;
-            this.ScreenBackgroundColor = screenbackground;
+            _renderer = renderer;
+            TimeZoneId = timezoneID;
+            _screenBackgroundColor = screenbackground;
             if (string.IsNullOrWhiteSpace(commands))
             {
-                commandlist = new();
+                _commandlist = new ();
             }
             else
             {
-                JsonSerializerOptions options = new()
+                JsonSerializerOptions options = new ()
                 {
                     AllowTrailingCommas = true
                 };
-                commandlist = JsonSerializer.Deserialize<List<RenderCommand>>(commands, options);
+                _commandlist = JsonSerializer.Deserialize<List<RenderCommand>>(commands, options);
             }
-            TickTimer = new()
+
+            _tickTimer = new ()
             {
                 TargetMillisecond = 55000,
                 ToleranceMillisecond = 5000,
                 Enabled = true
             };
-            TickTimer.Elapsed += UpdateClock;
+            _tickTimer.Elapsed += UpdateClock;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -141,13 +140,13 @@ namespace IoTDisplay.Common.Services
 
             if (disposing)
             {
-                TickTimer.Elapsed -= UpdateClock;
-                TickTimer.Enabled = false;
-                TickTimer.Dispose();
+                _tickTimer.Elapsed -= UpdateClock;
+                _tickTimer.Enabled = false;
+                _tickTimer.Dispose();
                 Clear();
             }
 
-            commandlist.Clear();
+            _commandlist.Clear();
             _disposed = true;
         }
 
@@ -169,13 +168,17 @@ namespace IoTDisplay.Common.Services
 
             // If the time is within 10 seconds of a new minute, use the next minute on the clock
             if (time.Second > 50)
+            {
                 time = time.AddSeconds(60 - time.Second).AddMilliseconds(0 - time.Millisecond);
+            }
 
             try
             {
-                foreach (RenderCommand item in commandlist)
+                foreach (RenderCommand item in _commandlist)
+                {
                     if (item.Type == 'T' && item.LastText != null && item.LastText != time.ToString(item.Format))
-                        renderer.Text(new()
+                    {
+                        _renderer.Text(new ()
                         {
                             X = item.X,
                             Y = item.Y,
@@ -189,12 +192,15 @@ namespace IoTDisplay.Common.Services
                             HexColor = item.BackgroundColor,
                             Delay = true
                         }, true, false);
-                foreach (RenderCommand item in commandlist)
+                    }
+                }
+
+                foreach (RenderCommand item in _commandlist)
                 {
                     switch (item.Type)
                     {
                         case 'I':
-                            renderer.Image(new() { X = item.X, Y = item.Y, Filename = item.Format, Delay = hasDrawn }, false);
+                            _renderer.Image(new () { X = item.X, Y = item.Y, Filename = item.Format, Delay = _hasDrawn }, false);
                             break;
                         case 'D':
                             string cmd = string.Format(item.HexColor, time);
@@ -202,24 +208,28 @@ namespace IoTDisplay.Common.Services
                             if (!hasEmbeded || item.LastText == null || item.LastText != cmd)
                             {
                                 if (hasEmbeded)
+                                {
                                     item.LastText = cmd;
-                                renderer.Draw(new()
+                                }
+
+                                _renderer.Draw(new ()
                                 {
                                     X = item.X,
                                     Y = item.Y,
                                     Width = item.Width,
                                     Height = item.Height,
                                     SvgCommands = cmd,
-                                    Delay = hasDrawn
+                                    Delay = _hasDrawn
                                 }, false);
                             }
-                            hasDrawn = true;
+
+                            _hasDrawn = true;
                             break;
                         case 'T':
                             if (item.LastText == null || item.LastText != time.ToString(item.Format))
                             {
                                 item.LastText = time.ToString(item.Format);
-                                renderer.Text(new()
+                                _renderer.Text(new ()
                                 {
                                     X = item.X,
                                     Y = item.Y,
@@ -231,10 +241,11 @@ namespace IoTDisplay.Common.Services
                                     FontWeight = item.FontWeight,
                                     FontWidth = item.FontWidth,
                                     HexColor = item.HexColor,
-                                    Delay = hasDrawn
+                                    Delay = _hasDrawn
                                 }, false, false);
                             }
-                            hasDrawn = true;
+
+                            _hasDrawn = true;
                             break;
                         default:
                             Console.WriteLine("Unknown clock command found in clock " + TimeZoneId + ": " + item.Type.ToString());
@@ -254,13 +265,14 @@ namespace IoTDisplay.Common.Services
 
         private void Clear()
         {
-            foreach (RenderCommand item in commandlist)
+            foreach (RenderCommand item in _commandlist)
             {
                 switch (item.Type)
                 {
                     case 'T':
                         if (item.LastText != null)
-                            renderer.Text(new()
+                        {
+                            _renderer.Text(new ()
                             {
                                 X = item.X,
                                 Y = item.Y,
@@ -271,22 +283,24 @@ namespace IoTDisplay.Common.Services
                                 FontSize = item.FontSize,
                                 FontWeight = item.FontWeight,
                                 FontWidth = item.FontWidth,
-                                HexColor = ScreenBackgroundColor,
+                                HexColor = _screenBackgroundColor,
                                 Delay = false
                             }, true, false);
+                        }
+
                         break;
                     case 'I':
                     case 'D':
-                        renderer.Draw(new()
+                        _renderer.Draw(new ()
                         {
                             X = item.X,
                             Y = item.Y,
                             Width = item.Width,
                             Height = item.Height,
-                            SvgCommands = ScreenBackgroundColor,
+                            SvgCommands = _screenBackgroundColor,
                             Delay = false
                         }, false);
-                        hasDrawn = true;
+                        _hasDrawn = true;
                         break;
                 }
             }
@@ -298,7 +312,10 @@ namespace IoTDisplay.Common.Services
 
         protected internal class RenderCommand
         {
-            public RenderCommand() { }
+            public RenderCommand()
+            {
+            }
+
             public char Type { get; init; }
             public int X { get; init; }
             public int Y { get; init; }

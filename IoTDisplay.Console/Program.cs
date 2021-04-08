@@ -16,7 +16,7 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.ConsoleApp
+namespace IoTDisplay.Console
 {
     #region Using
 

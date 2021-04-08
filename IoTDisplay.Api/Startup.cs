@@ -16,7 +16,7 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.WebApp
+namespace IoTDisplay.Api
 {
     #region Using
 

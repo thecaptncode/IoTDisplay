@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "IoTDisplay.ConsoleApp": {
+    "IoTDisplay.Console": {
       "commandName": "Project",
       "commandLineArgs": "none"
     }

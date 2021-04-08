@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <doc>
     <assembly>
-        <name>IoTDisplay.WebApp</name>
+        <name>IoTDisplay.Api</name>
     </assembly>
     <members>
-        <member name="T:IoTDisplay.WebApp.Controllers.IoTController">
+        <member name="T:IoTDisplay.Api.Controllers.IoTController">
             <summary>
             API to control an Internet of Things E-Paper screen
             </summary>
         </member>
-        <member name="M:IoTDisplay.WebApp.Controllers.IoTController.Get">
+        <member name="M:IoTDisplay.Api.Controllers.IoTController.Get">
             <summary>
             Returns the current screen as a image
             </summary>

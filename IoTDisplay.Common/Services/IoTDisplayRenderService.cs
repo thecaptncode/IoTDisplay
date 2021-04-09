@@ -51,6 +51,8 @@ namespace IoTDisplay.Common.Services
 
         public IIoTDisplayRenderService Refresh() => RefreshScreen();
 
+        public Stream ScreenAt(IoTDisplayActionService.ScreenAt area) => GetScreen(area);
+
         public IIoTDisplayRenderService Image(IoTDisplayActionService.Image image, bool persist = true) => AddImage(image, persist);
 
         public IIoTDisplayRenderService Draw(IoTDisplayActionService.Draw draw, bool persist = true) => AddDraw(draw, persist);
@@ -180,12 +182,80 @@ namespace IoTDisplay.Common.Services
                         newHeight = _settings.Width;
                     }
 
-                    SKBitmap image = new (newWidth, newHeight);
+                    using SKBitmap image = new (newWidth, newHeight, _screen.ColorType, _screen.AlphaType, _screen.ColorSpace);
 
                     using SKCanvas surface = new (image);
                     surface.Translate(newWidth, 0);
                     surface.RotateDegrees(_settings.Rotation);
                     surface.DrawBitmap(_screen, 0, 0);
+                    image.Encode(wstream, SKEncodedImageFormat.Png, 100);
+                }
+            }
+
+            memStream.Position = 0;
+            return memStream;
+        }
+
+        private Stream GetScreen(IoTDisplayActionService.ScreenAt area)
+        {
+            if (area.X < 0 || area.X >= _settings.Width)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.X), area.X, "X coordinate is not within the screen");
+            }
+
+            if (area.Y < 0 || area.Y >= _settings.Height)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.Y), area.Y, "Y coordinate is not within the screen");
+            }
+
+            if (area.Width <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.Width), area.Width, "Width must be greater than zero");
+            }
+
+            if (area.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.Height), area.Height, "Height must be greater than zero");
+            }
+
+            if (area.Width + area.X > _settings.Width)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.Width), area.Width, "Width area is wider than the screen");
+            }
+
+            if (area.Height + area.Y > _settings.Height)
+            {
+                throw new ArgumentOutOfRangeException(nameof(area.Height), area.Height, "Height area is taller than the screen");
+            }
+
+            MemoryStream memStream = new ();
+            using (SKManagedWStream wstream = new (memStream))
+            {
+                if (_settings.Rotation == 0)
+                {
+                    using SKBitmap image = new (area.Width, area.Height, _screen.ColorType, _screen.AlphaType, _screen.ColorSpace);
+                    if (!_screen.ExtractSubset(image, SKRectI.Create(area.X, area.Y, area.Width, area.Height)))
+                    {
+                        throw new ArgumentException("Unable to extract an area of the canvas");
+                    }
+
+                    image.Encode(wstream, SKEncodedImageFormat.Png, 100);
+                }
+                else
+                {
+                    int newWidth = area.Width;
+                    int newHeight = area.Height;
+                    if (_settings.IsPortrait)
+                    {
+                        newWidth = area.Height;
+                        newHeight = area.Width;
+                    }
+
+                    SKBitmap image = new (newWidth, newHeight, _screen.ColorType, _screen.AlphaType, _screen.ColorSpace);
+                    using SKCanvas surface = new (image);
+                    surface.Translate(newWidth, 0);
+                    surface.RotateDegrees(_settings.Rotation);
+                    surface.DrawBitmap(_screen, SKRectI.Create(area.X, area.Y, area.Width, area.Height), SKRectI.Create(0, 0, newWidth, newHeight));
                     image.Encode(wstream, SKEncodedImageFormat.Png, 100);
                 }
             }

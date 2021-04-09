@@ -43,6 +43,7 @@ namespace IoTDisplay.Console
         typeof(IoTDisplayActionService.ClockTime),
         typeof(IoTDisplayActionService.Draw),
         typeof(IoTDisplayActionService.Get),
+        typeof(IoTDisplayActionService.GetAt),
         typeof(IoTDisplayActionService.Image),
         typeof(IoTDisplayActionService.LastUpdated),
         typeof(IoTDisplayActionService.Refresh),

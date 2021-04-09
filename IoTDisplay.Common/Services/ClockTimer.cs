@@ -137,8 +137,6 @@ namespace IoTDisplay.Common.Services
             // Update the interval to prevent clock drift
             Interval = next;
             _dueTime = time.AddMilliseconds(next);
-            // if (next > 60000)
-            //     Console.WriteLine($"Timer interval {Interval.ToString()} due {dueTime.ToString()}");
         }
 
         private void ElapsedAction(object sender, ElapsedEventArgs e)

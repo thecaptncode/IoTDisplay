@@ -156,6 +156,36 @@ namespace IoTDisplay.Common
         }
 
         /// <summary>
+        /// Saves the current screen to a png file
+        /// </summary>
+        [Command("screenat", Description = "Saves an area of the screen to a png file")]
+        public class GetAt : ScreenAt
+        {
+            /// <summary>
+            /// Filename to save the current screen area to
+            /// </summary>
+            /// <example>/home/pi/current.png</example>
+            [Required]
+            [Option("-f|--filename", CommandOptionType.SingleValue, Description = "Filename to save the current screen area to")]
+            public string Filename { get; set; }
+
+            private async Task<int> OnExecuteAsync(IConsole console)
+            {
+                Response response = await RespondWith(HttpMethod.Post, "ScreenAt", JsonSerializer.SerializeToUtf8Bytes<ScreenAt>(this));
+                if (response.ExitCode == 0)
+                {
+                    File.WriteAllBytes(Filename, response.Result);
+                }
+                else
+                {
+                    console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
+                }
+
+                return response.ExitCode;
+            }
+        }
+
+        /// <summary>
         /// Gets the last date and time the screen was updated
         /// </summary>
         [Command("lastupdated", Description = "Gets the last date and time the screen was updated")]
@@ -213,6 +243,45 @@ namespace IoTDisplay.Common
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
+        }
+
+        /// <summary>
+        /// Gets an area of the screen
+        /// </summary>
+        public class ScreenAt
+        {
+            /// <summary>
+            /// X coordinate to get
+            /// </summary>
+            /// <example>10</example>
+            [Required]
+            [Option("-x", CommandOptionType.SingleValue, Description = "X coordinate to get")]
+            public int X { get; set; }
+
+            /// <summary>
+            /// Y coordinate to get
+            /// </summary>
+            /// <example>100</example>
+            [Required]
+            [Option("-y", CommandOptionType.SingleValue, Description = "Y coordinate to get")]
+            public int Y { get; set; }
+
+            /// <summary>
+            /// Width of area to get
+            /// </summary>
+            /// <example>300</example>
+            [Required]
+            [Option("-w|--width", CommandOptionType.SingleValue, Description = "Width of area to get")]
+            public int Width { get; set; }
+
+            /// <summary>
+            /// Height of area to get
+            /// </summary>
+            /// <example>200</example>
+            [Required]
+            [Option("-h|--height", CommandOptionType.SingleValue, Description = "Height of area to get")]
+            public int Height { get; set; }
+
         }
 
         /// <summary>

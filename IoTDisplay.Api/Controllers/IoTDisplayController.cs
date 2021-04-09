@@ -21,6 +21,7 @@ namespace IoTDisplay.Api.Controllers
     #region Using
 
     using System;
+    using System.IO;
     using System.Net;
     using IoTDisplay.Common;
     using IoTDisplay.Common.Services;
@@ -72,7 +73,26 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public ActionResult Screen()
         {
-            return File(_ioTDisplayService.Renderer.Screen, "image/png");
+            string result = null;
+            Stream area = null;
+            try
+            {
+                area = _ioTDisplayService.Renderer.Screen;
+            }
+            catch (ArgumentException ex)
+            {
+                result = ex.Message;
+            }
+
+            if (result == null)
+            {
+                return File(area, "image/png");
+            }
+            else
+            {
+                return BadRequest(result);
+            }
+
         }
 
         /// <summary>
@@ -218,6 +238,54 @@ namespace IoTDisplay.Api.Controllers
         #endregion GET
 
         #region POST
+
+        /// <summary>
+        /// Gets an area of the screen
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /ScreenAt
+        ///     {
+        ///         "x": 10,
+        ///         "y": 100,
+        ///         "width": 300,
+        ///         "height": 200
+        ///     }
+        ///
+        /// </remarks>
+        /// <returns>Screen area as a PNG</returns>
+        /// <response code="200">The screen area was returned</response>
+        /// <response code="400">The screen area could not be returned</response>
+        /// <response code="500">An unknown error occured processing the request</response>
+        [HttpPost]
+        [Route("ScreenAt")]
+        [Produces("image/png")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
+        public ActionResult ScreenAt(IoTDisplayActionService.ScreenAt screenat)
+        {
+            string result = null;
+            Stream area = null;
+            try
+            {
+                area = _ioTDisplayService.Renderer.ScreenAt(screenat);
+            }
+            catch (ArgumentException ex)
+            {
+                result = ex.Message;
+            }
+
+            if (result == null)
+            {
+                return File(area, "image/png");
+            }
+            else
+            {
+                return BadRequest(result);
+            }
+        }
 
         /// <summary>
         /// Loads an image from a file on the screen

@@ -43,6 +43,8 @@ namespace IoTDisplay.Common.Services
 
         public IIoTDisplayRenderService Refresh();
 
+        public Stream ScreenAt(IoTDisplayActionService.ScreenAt area);
+
         public IIoTDisplayRenderService Image(IoTDisplayActionService.Image image, bool persist = true);
 
         public IIoTDisplayRenderService Draw(IoTDisplayActionService.Draw draw, bool persist = true);

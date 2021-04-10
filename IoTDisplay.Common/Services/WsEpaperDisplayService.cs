@@ -23,19 +23,20 @@ namespace IoTDisplay.Common.Services
     using System;
     using System.IO;
     using System.Timers;
+    using IoTDisplay.Common.Models;
     using Waveshare;
     using Waveshare.Devices;
     using Waveshare.Interfaces;
 
     #endregion Using
 
-    public class IoTDisplayService : IIoTDisplayService
+    public class WsEPaperDisplayService : IDisplayService
     {
         #region Properties
 
-        public IIoTDisplayRenderService Renderer { get; init; }
+        public IRenderService Renderer { get; init; }
 
-        public IoTDisplayRenderSettings Settings { get; init; }
+        public RenderSettings Settings { get; init; }
 
         public TimeSpan RefreshTime { get; init; }
 
@@ -51,8 +52,8 @@ namespace IoTDisplay.Common.Services
 
         #region Fields
 
-        private static ClockTimer _updateTimer;
-        private static ClockTimer _refreshTimer;
+        private static TimerService _updateTimer;
+        private static TimerService _refreshTimer;
         private readonly IEPaperDisplay _display;
         private readonly object _updatelock = new ();
         private DateTime _lastUpdated;
@@ -63,7 +64,7 @@ namespace IoTDisplay.Common.Services
 
         #region Constructor / Dispose / Finalizer
 
-        public IoTDisplayService(EPaperDisplayType driver, IIoTDisplayRenderService renderer, IoTDisplayRenderSettings settings, TimeSpan refreshtime)
+        public WsEPaperDisplayService(EPaperDisplayType driver, IRenderService renderer, RenderSettings settings, TimeSpan refreshtime)
         {
             DriverName = driver.ToString();
             _display = EPaperDisplay.Create(driver);
@@ -74,7 +75,7 @@ namespace IoTDisplay.Common.Services
             }
             else
             {
-                Settings = new IoTDisplayRenderSettings()
+                Settings = new RenderSettings()
                 {
                     Width = _display.Width,
                     Height = _display.Height,
@@ -113,7 +114,7 @@ namespace IoTDisplay.Common.Services
         /// <summary>
         /// Finalizer
         /// </summary>
-        ~IoTDisplayService()
+        ~WsEPaperDisplayService()
         {
             if (_display != null)
             {

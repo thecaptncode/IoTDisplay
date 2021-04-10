@@ -23,10 +23,11 @@ namespace IoTDisplay.Common.Services
     using System;
     using System.Collections.Generic;
     using System.Text.Json;
+    using IoTDisplay.Common.Models;
 
     #endregion Using
 
-    public class IoTDisplayClock : IDisposable
+    public class ClockService : IDisposable
     {
         #region Properties
 
@@ -36,7 +37,7 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Public)
 
-        public void AddImage(IoTDisplayActionService.ClockImage clockImage, int width, int height)
+        public void AddImage(RenderActions.ClockImage clockImage, int width, int height)
         {
             RenderCommand cmd = new ()
             {
@@ -50,7 +51,7 @@ namespace IoTDisplay.Common.Services
             _commandlist.Add(cmd);
         }
 
-        public void AddDraw(IoTDisplayActionService.ClockDraw clockDraw)
+        public void AddDraw(RenderActions.ClockDraw clockDraw)
         {
             RenderCommand cmd = new ()
             {
@@ -64,7 +65,7 @@ namespace IoTDisplay.Common.Services
             _commandlist.Add(cmd);
         }
 
-        public void AddTime(IoTDisplayActionService.ClockTime clockTime, int width, int height)
+        public void AddTime(RenderActions.ClockTime clockTime, int width, int height)
         {
             RenderCommand cmd = new ()
             {
@@ -94,8 +95,8 @@ namespace IoTDisplay.Common.Services
         #endregion Methods (Public)
 
         #region Fields
-        private static ClockTimer _tickTimer;
-        private readonly IIoTDisplayRenderService _renderer;
+        private static TimerService _tickTimer;
+        private readonly IRenderService _renderer;
         private readonly List<RenderCommand> _commandlist;
         private readonly string _screenBackgroundColor;
         private bool _disposed = false;
@@ -104,7 +105,7 @@ namespace IoTDisplay.Common.Services
         #endregion Fields
 
         #region Constructor / Dispose / Finalizer
-        public IoTDisplayClock(IIoTDisplayRenderService renderer, string timezoneID, string screenbackground, string commands)
+        public ClockService(IRenderService renderer, string timezoneID, string screenbackground, string commands)
         {
             _renderer = renderer;
             TimeZoneId = timezoneID;
@@ -156,7 +157,7 @@ namespace IoTDisplay.Common.Services
             GC.SuppressFinalize(this);
         }
 
-        ~IoTDisplayClock() => Dispose(false);
+        ~ClockService() => Dispose(false);
 
         #endregion Constructor / Dispose / Finalizer
 

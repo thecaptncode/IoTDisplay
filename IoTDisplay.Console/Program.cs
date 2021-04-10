@@ -21,10 +21,13 @@ namespace IoTDisplay.Console
     #region Using
 
     using System;
+    using System.IO;
     using System.Reflection;
     using System.Threading.Tasks;
-    using IoTDisplay.Common;
+    using IoTDisplay.Common.Models;
     using McMaster.Extensions.CommandLineUtils;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
 
     #endregion
@@ -34,20 +37,20 @@ namespace IoTDisplay.Console
     [HelpOption]
     [VersionOptionFromMember(MemberName = "GetVersion")]
     [Subcommand(
-        typeof(IoTDisplayActionService.Clear),
-        typeof(IoTDisplayActionService.Clock),
-        typeof(IoTDisplayActionService.ClockClear),
-        typeof(IoTDisplayActionService.ClockDelete),
-        typeof(IoTDisplayActionService.ClockDraw),
-        typeof(IoTDisplayActionService.ClockImage),
-        typeof(IoTDisplayActionService.ClockTime),
-        typeof(IoTDisplayActionService.Draw),
-        typeof(IoTDisplayActionService.Get),
-        typeof(IoTDisplayActionService.GetAt),
-        typeof(IoTDisplayActionService.Image),
-        typeof(IoTDisplayActionService.LastUpdated),
-        typeof(IoTDisplayActionService.Refresh),
-        typeof(IoTDisplayActionService.Text))
+        typeof(RenderActions.Clear),
+        typeof(RenderActions.Clock),
+        typeof(RenderActions.ClockClear),
+        typeof(RenderActions.ClockDelete),
+        typeof(RenderActions.ClockDraw),
+        typeof(RenderActions.ClockImage),
+        typeof(RenderActions.ClockTime),
+        typeof(RenderActions.Draw),
+        typeof(RenderActions.Get),
+        typeof(RenderActions.GetAt),
+        typeof(RenderActions.Image),
+        typeof(RenderActions.LastUpdated),
+        typeof(RenderActions.Refresh),
+        typeof(RenderActions.Text))
     ]
     internal class Program
     {
@@ -56,7 +59,16 @@ namespace IoTDisplay.Console
         {
             try
             {
+                IConfigurationRoot configuration = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: false)
+                    .AddEnvironmentVariables()
+                    .Build();
                 await Host.CreateDefaultBuilder()
+                    .ConfigureServices((hostContext, services) =>
+                    {
+                        services.Configure<AppSettings.Console>(configuration.GetSection("Console"));
+                    })
                     .RunCommandLineApplicationAsync<Program>(args);
             }
             catch (CommandParsingException ex)

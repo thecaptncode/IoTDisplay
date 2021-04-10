@@ -25,7 +25,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class ClockTimer : Timer
+    public class TimerService : Timer
     {
         #region Properties
 
@@ -74,7 +74,7 @@ namespace IoTDisplay.Common.Services
 
         #region Constructor / Dispose / Finalizer
 
-        public ClockTimer()
+        public TimerService()
             : base()
         {
             AutoReset = true;

@@ -23,7 +23,7 @@ namespace IoTDisplay.Api.Controllers
     using System;
     using System.IO;
     using System.Net;
-    using IoTDisplay.Common;
+    using IoTDisplay.Common.Models;
     using IoTDisplay.Common.Services;
     using Microsoft.AspNetCore.Mvc;
 
@@ -34,17 +34,17 @@ namespace IoTDisplay.Api.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class IoTDisplayController : ControllerBase
+    public class ActionController : ControllerBase
     {
         #region Fields
 
-        private readonly IIoTDisplayService _ioTDisplayService;
+        private readonly IDisplayService _ioTDisplayService;
 
         #endregion Fields
 
         #region Constructor
 
-        public IoTDisplayController(IIoTDisplayService ioTDisplayService)
+        public ActionController(IDisplayService ioTDisplayService)
         {
             _ioTDisplayService = ioTDisplayService;
         }
@@ -264,7 +264,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ScreenAt(IoTDisplayActionService.ScreenAt screenat)
+        public ActionResult ScreenAt(RenderActions.ScreenAt screenat)
         {
             string result = null;
             Stream area = null;
@@ -311,7 +311,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult Image(IoTDisplayActionService.Image image)
+        public ActionResult Image(RenderActions.Image image)
         {
             string result = null;
             try
@@ -359,7 +359,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult Draw(IoTDisplayActionService.Draw draw)
+        public ActionResult Draw(RenderActions.Draw draw)
         {
             string result = null;
             try
@@ -412,7 +412,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult Text(IoTDisplayActionService.Text text)
+        public ActionResult Text(RenderActions.Text text)
         {
             string result = null;
             try
@@ -457,7 +457,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult Clock(IoTDisplayActionService.Clock clock)
+        public ActionResult Clock(RenderActions.Clock clock)
         {
             string result = null;
             try
@@ -506,7 +506,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockImage(IoTDisplayActionService.ClockImage clockImage)
+        public ActionResult ClockImage(RenderActions.ClockImage clockImage)
         {
             string result = null;
             try
@@ -557,7 +557,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockDraw(IoTDisplayActionService.ClockDraw clockDraw)
+        public ActionResult ClockDraw(RenderActions.ClockDraw clockDraw)
         {
             string result = null;
             try
@@ -611,7 +611,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockTime(IoTDisplayActionService.ClockTime clockTime)
+        public ActionResult ClockTime(RenderActions.ClockTime clockTime)
         {
             string result = null;
             try
@@ -654,7 +654,7 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockDelete(IoTDisplayActionService.ClockDelete clockDelete)
+        public ActionResult ClockDelete(RenderActions.ClockDelete clockDelete)
         {
             string result = null;
             try

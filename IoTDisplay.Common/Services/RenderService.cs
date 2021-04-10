@@ -27,13 +27,14 @@ namespace IoTDisplay.Common.Services
     using System.Text.Json;
     using System.Threading;
     using System.Xml;
+    using IoTDisplay.Common.Models;
     using SkiaSharp;
     using Svg.Skia;
     using TimeZoneConverter;
 
     #endregion Using
 
-    public class IoTDisplayRenderService : IIoTDisplayRenderService
+    public class RenderService : IRenderService
     {
         #region Properties and Events
 
@@ -45,32 +46,32 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Public)
 
-        public void Create(IoTDisplayRenderSettings settings) => SetScreen(settings);
+        public void Create(RenderSettings settings) => SetScreen(settings);
 
-        public IIoTDisplayRenderService Clear() => ClearScreen();
+        public IRenderService Clear() => ClearScreen();
 
-        public IIoTDisplayRenderService Refresh() => RefreshScreen();
+        public IRenderService Refresh() => RefreshScreen();
 
-        public Stream ScreenAt(IoTDisplayActionService.ScreenAt area) => GetScreen(area);
+        public Stream ScreenAt(RenderActions.ScreenAt area) => GetScreen(area);
 
-        public IIoTDisplayRenderService Image(IoTDisplayActionService.Image image, bool persist = true) => AddImage(image, persist);
+        public IRenderService Image(RenderActions.Image image, bool persist = true) => AddImage(image, persist);
 
-        public IIoTDisplayRenderService Draw(IoTDisplayActionService.Draw draw, bool persist = true) => AddDraw(draw, persist);
+        public IRenderService Draw(RenderActions.Draw draw, bool persist = true) => AddDraw(draw, persist);
 
-        public IIoTDisplayRenderService Text(IoTDisplayActionService.Text text, bool bold = false, bool persist = true) =>
+        public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true) =>
             AddText(text, bold, persist);
 
-        public IIoTDisplayRenderService Clock(IoTDisplayActionService.Clock clock) => AddClock(clock);
+        public IRenderService Clock(RenderActions.Clock clock) => AddClock(clock);
 
-        public IIoTDisplayRenderService ClockClear() => ClearClocks();
+        public IRenderService ClockClear() => ClearClocks();
 
-        public IIoTDisplayRenderService ClockImage(IoTDisplayActionService.ClockImage clockImage) => AddClock(clockImage);
+        public IRenderService ClockImage(RenderActions.ClockImage clockImage) => AddClock(clockImage);
 
-        public IIoTDisplayRenderService ClockDraw(IoTDisplayActionService.ClockDraw clockDraw) => AddClock(clockDraw);
+        public IRenderService ClockDraw(RenderActions.ClockDraw clockDraw) => AddClock(clockDraw);
 
-        public IIoTDisplayRenderService ClockTime(IoTDisplayActionService.ClockTime clockTime) => AddClock(clockTime);
+        public IRenderService ClockTime(RenderActions.ClockTime clockTime) => AddClock(clockTime);
 
-        public IIoTDisplayRenderService ClockDelete(IoTDisplayActionService.ClockDelete clockDelete) => DeleteClock(clockDelete);
+        public IRenderService ClockDelete(RenderActions.ClockDelete clockDelete) => DeleteClock(clockDelete);
 
         #endregion Methods (Public)
 
@@ -78,19 +79,19 @@ namespace IoTDisplay.Common.Services
 
         private readonly object _exportLock = new ();
 
-        private IoTDisplayRenderSettings _settings;
+        private RenderSettings _settings;
 
         private SKBitmap _screen;
 
         private SKCanvas _canvas;
 
-        private IDictionary<string, IoTDisplayClock> _clocks;
+        private IDictionary<string, ClockService> _clocks;
 
         #endregion Fields
 
         #region Constructor
 
-        public IoTDisplayRenderService()
+        public RenderService()
         {
         }
 
@@ -153,13 +154,13 @@ namespace IoTDisplay.Common.Services
             return System.Text.RegularExpressions.Regex.Replace(name, invalidRegStr, "_");
         }
 
-        private void SetScreen(IoTDisplayRenderSettings settings)
+        private void SetScreen(RenderSettings settings)
         {
             _settings = settings;
             _screen = new (_settings.Width, _settings.Height);
             _canvas = new (_screen);
             _canvas.Clear(_settings.Background);
-            _clocks = new Dictionary<string, IoTDisplayClock>();
+            _clocks = new Dictionary<string, ClockService>();
             Import(true);
         }
 
@@ -196,7 +197,7 @@ namespace IoTDisplay.Common.Services
             return memStream;
         }
 
-        private Stream GetScreen(IoTDisplayActionService.ScreenAt area)
+        private Stream GetScreen(RenderActions.ScreenAt area)
         {
             if (area.X < 0 || area.X >= _settings.Width)
             {
@@ -264,7 +265,7 @@ namespace IoTDisplay.Common.Services
             return memStream;
         }
 
-        private IIoTDisplayRenderService ClearScreen()
+        private IRenderService ClearScreen()
         {
             _canvas.Clear(_settings.Background);
 
@@ -285,7 +286,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService RefreshScreen()
+        private IRenderService RefreshScreen()
         {
             _canvas.Clear(_settings.Background);
             Import(false);
@@ -294,7 +295,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddImage(IoTDisplayActionService.Image image, bool persist = true)
+        private IRenderService AddImage(RenderActions.Image image, bool persist = true)
         {
             int width = 0;
             int height = 0;
@@ -320,7 +321,7 @@ namespace IoTDisplay.Common.Services
             {
                 bool saveDelay = image.Delay;
                 image.Delay = true;
-                Export("image\t" + JsonSerializer.Serialize<IoTDisplayActionService.Image>(image));
+                Export("image\t" + JsonSerializer.Serialize<RenderActions.Image>(image));
                 image.Delay = saveDelay;
             }
 
@@ -328,7 +329,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddDraw(IoTDisplayActionService.Draw draw, bool persist = true)
+        private IRenderService AddDraw(RenderActions.Draw draw, bool persist = true)
         {
             try
             {
@@ -350,7 +351,7 @@ namespace IoTDisplay.Common.Services
             {
                 bool saveDelay = draw.Delay;
                 draw.Delay = true;
-                Export("draw\t" + JsonSerializer.Serialize<IoTDisplayActionService.Draw>(draw));
+                Export("draw\t" + JsonSerializer.Serialize<RenderActions.Draw>(draw));
                 draw.Delay = saveDelay;
             }
 
@@ -358,7 +359,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddText(IoTDisplayActionService.Text text, bool bold = false, bool persist = true)
+        private IRenderService AddText(RenderActions.Text text, bool bold = false, bool persist = true)
         {
             int width = 0;
             int height = 0;
@@ -401,7 +402,7 @@ namespace IoTDisplay.Common.Services
             {
                 bool saveDelay = text.Delay;
                 text.Delay = true;
-                Export("text\t" + JsonSerializer.Serialize<IoTDisplayActionService.Text>(text));
+                Export("text\t" + JsonSerializer.Serialize<RenderActions.Text>(text));
                 text.Delay = saveDelay;
             }
 
@@ -409,7 +410,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService ClearClocks()
+        private IRenderService ClearClocks()
         {
             int clocksecond = DateTime.Now.Second;
             if (clocksecond > 48)
@@ -417,7 +418,7 @@ namespace IoTDisplay.Common.Services
                 Thread.Sleep((61 - clocksecond) * 1000);
             }
 
-            foreach (KeyValuePair<string, IoTDisplayClock> clock in _clocks)
+            foreach (KeyValuePair<string, ClockService> clock in _clocks)
             {
                 DeleteClock(new () { Timezone = clock.Value.TimeZoneId });
             }
@@ -425,7 +426,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddClock(IoTDisplayActionService.Clock clock)
+        private IRenderService AddClock(RenderActions.Clock clock)
         {
             string tzId;
             try
@@ -448,7 +449,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddClock(IoTDisplayActionService.ClockImage clockImage)
+        private IRenderService AddClock(RenderActions.ClockImage clockImage)
         {
             string tzId;
             int width = 0;
@@ -470,7 +471,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddClock(IoTDisplayActionService.ClockDraw clockDraw)
+        private IRenderService AddClock(RenderActions.ClockDraw clockDraw)
         {
             string tzId;
             if (!string.IsNullOrEmpty(clockDraw.SvgCommands))
@@ -494,7 +495,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService AddClock(IoTDisplayActionService.ClockTime clockTime)
+        private IRenderService AddClock(RenderActions.ClockTime clockTime)
         {
             string tzId;
             int width;
@@ -549,7 +550,7 @@ namespace IoTDisplay.Common.Services
             return this;
         }
 
-        private IIoTDisplayRenderService DeleteClock(IoTDisplayActionService.ClockDelete clockDelete)
+        private IRenderService DeleteClock(RenderActions.ClockDelete clockDelete)
         {
             string tzId;
             try
@@ -804,7 +805,7 @@ namespace IoTDisplay.Common.Services
             string filepath = _settings.Statefolder + "IoTDisplayClocks.txt";
 
             using FileStream fs = new (filepath, FileMode.Create, FileAccess.Write, FileShare.Read);
-            foreach (KeyValuePair<string, IoTDisplayClock> clock in _clocks)
+            foreach (KeyValuePair<string, ClockService> clock in _clocks)
             {
                 fs.Write(Encoding.UTF8.GetBytes(clock.Key + "\n"));
                 if (clockState)
@@ -874,15 +875,15 @@ namespace IoTDisplay.Common.Services
                             switch (cmd[0])
                             {
                                 case "image":
-                                    AddImage(JsonSerializer.Deserialize<IoTDisplayActionService.Image>(cmd[1], options), false);
+                                    AddImage(JsonSerializer.Deserialize<RenderActions.Image>(cmd[1], options), false);
                                     updated = true;
                                     break;
                                 case "draw":
-                                    AddDraw(JsonSerializer.Deserialize<IoTDisplayActionService.Draw>(cmd[1], options), false);
+                                    AddDraw(JsonSerializer.Deserialize<RenderActions.Draw>(cmd[1], options), false);
                                     updated = true;
                                     break;
                                 case "text":
-                                    AddText(JsonSerializer.Deserialize<IoTDisplayActionService.Text>(cmd[1], options), false, false);
+                                    AddText(JsonSerializer.Deserialize<RenderActions.Text>(cmd[1], options), false, false);
                                     updated = true;
                                     break;
                                 default:

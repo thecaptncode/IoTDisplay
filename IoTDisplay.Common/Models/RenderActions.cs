@@ -16,7 +16,7 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.Common
+namespace IoTDisplay.Common.Models
 {
     #region Using
 
@@ -29,31 +29,36 @@ namespace IoTDisplay.Common
     using System.Text.Json;
     using System.Threading.Tasks;
     using McMaster.Extensions.CommandLineUtils;
+    using Microsoft.Extensions.Options;
 
     #endregion Using
 
-    public class IoTDisplayActionService
+    public class RenderActions
     {
-        private const string BaseURL = "http://localhost:5000/api/IoTDisplay/";
-
         #region Methods (Private)
 
         /// <summary>
         /// Sent HTTP post
         /// </summary>
         /// <param name="method">HTTP Method to use</param>
+        /// <param name="settings">Application Settings</param>
         /// <param name="uri">URI to send to</param>
         /// <param name="document">Document to send</param>
         /// <returns>Byte array of response</returns>
-        private static async Task<Response> RespondWith(HttpMethod method, string uri, byte[] document)
+        private static async Task<Response> RespondWith(HttpMethod method, AppSettings.Console settings, string uri, byte[] document)
         {
             byte[] responseBytes = null;
             int exitCode = 0;
             byte[] reasonBytes = null;
+            if (string.IsNullOrWhiteSpace(settings?.BaseUrl))
+            {
+                return new Response { Result = Encoding.UTF8.GetBytes("BaseUrl not found in configuration file" + Environment.NewLine), ExitCode = 3 };
+            }
+
             try
             {
                 using HttpClient httpClient = new ();
-                using HttpRequestMessage request = new (method, BaseURL + uri);
+                using HttpRequestMessage request = new (method, settings.BaseUrl + uri);
                 request.Content = new ByteArrayContent(document);
                 request.Content.Headers.ContentType = new ("application/json");
                 using HttpResponseMessage response = await httpClient.SendAsync(request);
@@ -139,9 +144,9 @@ namespace IoTDisplay.Common
             [Option("-f|--filename", CommandOptionType.SingleValue, Description = "Filename to save the current screen to")]
             public string Filename { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Get, string.Empty, Array.Empty<byte>());
+                Response response = await RespondWith(HttpMethod.Get, options.Value, string.Empty, Array.Empty<byte>());
                 if (response.ExitCode == 0)
                 {
                     File.WriteAllBytes(Filename, response.Result);
@@ -169,9 +174,9 @@ namespace IoTDisplay.Common
             [Option("-f|--filename", CommandOptionType.SingleValue, Description = "Filename to save the current screen area to")]
             public string Filename { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "ScreenAt", JsonSerializer.SerializeToUtf8Bytes<ScreenAt>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "ScreenAt", JsonSerializer.SerializeToUtf8Bytes<ScreenAt>(this));
                 if (response.ExitCode == 0)
                 {
                     File.WriteAllBytes(Filename, response.Result);
@@ -192,9 +197,9 @@ namespace IoTDisplay.Common
         public class LastUpdated
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Get, "LastUpdated", Array.Empty<byte>());
+                Response response = await RespondWith(HttpMethod.Get, options.Value, "LastUpdated", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -207,9 +212,9 @@ namespace IoTDisplay.Common
         public class Refresh
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Get, "Refresh", Array.Empty<byte>());
+                Response response = await RespondWith(HttpMethod.Get, options.Value, "Refresh", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -222,9 +227,9 @@ namespace IoTDisplay.Common
         public class Clear
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Get, "Clear", Array.Empty<byte>());
+                Response response = await RespondWith(HttpMethod.Get, options.Value, "Clear", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -237,9 +242,9 @@ namespace IoTDisplay.Common
         public class ClockClear
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "CommandLineUtils needs this to be non static")]
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Get, "ClockClear", Array.Empty<byte>());
+                Response response = await RespondWith(HttpMethod.Get, options.Value, "ClockClear", Array.Empty<byte>());
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -322,9 +327,9 @@ namespace IoTDisplay.Common
             [Option("-d|--delay", CommandOptionType.SingleValue, Description = "Delay screen update (optional)")]
             public bool Delay { get; set; } = false;
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "Image", JsonSerializer.SerializeToUtf8Bytes<Image>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "Image", JsonSerializer.SerializeToUtf8Bytes<Image>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -385,9 +390,9 @@ namespace IoTDisplay.Common
             [Option("-d|--delay", CommandOptionType.SingleValue, Description = "Delay screen update (optional)")]
             public bool Delay { get; set; } = false;
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "Draw", JsonSerializer.SerializeToUtf8Bytes<Draw>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "Draw", JsonSerializer.SerializeToUtf8Bytes<Draw>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -486,9 +491,9 @@ namespace IoTDisplay.Common
             [Option("-d|--delay", CommandOptionType.SingleValue, Description = "Delay screen update (optional)")]
             public bool Delay { get; set; } = false;
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "Text", JsonSerializer.SerializeToUtf8Bytes<Text>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "Text", JsonSerializer.SerializeToUtf8Bytes<Text>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -507,9 +512,9 @@ namespace IoTDisplay.Common
             [Option("-z|--timezone", CommandOptionType.SingleValue, Description = "Time zone to use for the clock (blank for device default)")]
             public string Timezone { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "Clock", JsonSerializer.SerializeToUtf8Bytes<Clock>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "Clock", JsonSerializer.SerializeToUtf8Bytes<Clock>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -552,9 +557,9 @@ namespace IoTDisplay.Common
             [Option("-f|--filename", CommandOptionType.SingleValue, Description = "Filename of the image to place on the screen")]
             public string Filename { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "ClockImage", JsonSerializer.SerializeToUtf8Bytes<ClockImage>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "ClockImage", JsonSerializer.SerializeToUtf8Bytes<ClockImage>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -616,9 +621,9 @@ namespace IoTDisplay.Common
             [Option("-c|--svgsommands", CommandOptionType.SingleValue, Description = "SVG command(s) used to draw the image or hexColor of square (optional)")]
             public string SvgCommands { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "ClockDraw", JsonSerializer.SerializeToUtf8Bytes<ClockDraw>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "ClockDraw", JsonSerializer.SerializeToUtf8Bytes<ClockDraw>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -723,9 +728,9 @@ namespace IoTDisplay.Common
             [Option("-bc|--backgroundcolor", CommandOptionType.SingleValue, Description = "HexColor to use for the clock's background (optional)")]
             public string BackgroundColor { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "ClockTime", JsonSerializer.SerializeToUtf8Bytes<ClockTime>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "ClockTime", JsonSerializer.SerializeToUtf8Bytes<ClockTime>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }
@@ -744,9 +749,9 @@ namespace IoTDisplay.Common
             [Option("-z|--timezone", CommandOptionType.SingleValue, Description = "Time zone of the clock (blank for device default)")]
             public string Timezone { get; set; }
 
-            private async Task<int> OnExecuteAsync(IConsole console)
+            private async Task<int> OnExecuteAsync(IConsole console, IOptions<AppSettings.Console> options)
             {
-                Response response = await RespondWith(HttpMethod.Post, "ClockDelete", JsonSerializer.SerializeToUtf8Bytes<ClockDelete>(this));
+                Response response = await RespondWith(HttpMethod.Post, options.Value, "ClockDelete", JsonSerializer.SerializeToUtf8Bytes<ClockDelete>(this));
                 console.Write(Encoding.UTF8.GetChars(response.Result, 0, response.Result.Length));
                 return response.ExitCode;
             }

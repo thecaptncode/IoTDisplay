@@ -22,10 +22,11 @@ namespace IoTDisplay.Common.Services
 
     using System;
     using System.IO;
+    using IoTDisplay.Common.Models;
 
     #endregion Using
 
-    public interface IIoTDisplayRenderService
+    public interface IRenderService
     {
         #region Properties and Events
 
@@ -37,31 +38,31 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Public)
 
-        public void Create(IoTDisplayRenderSettings settings);
+        public void Create(RenderSettings settings);
 
-        public IIoTDisplayRenderService Clear();
+        public IRenderService Clear();
 
-        public IIoTDisplayRenderService Refresh();
+        public IRenderService Refresh();
 
-        public Stream ScreenAt(IoTDisplayActionService.ScreenAt area);
+        public Stream ScreenAt(RenderActions.ScreenAt area);
 
-        public IIoTDisplayRenderService Image(IoTDisplayActionService.Image image, bool persist = true);
+        public IRenderService Image(RenderActions.Image image, bool persist = true);
 
-        public IIoTDisplayRenderService Draw(IoTDisplayActionService.Draw draw, bool persist = true);
+        public IRenderService Draw(RenderActions.Draw draw, bool persist = true);
 
-        public IIoTDisplayRenderService Text(IoTDisplayActionService.Text text, bool bold = false, bool persist = true);
+        public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true);
 
-        public IIoTDisplayRenderService Clock(IoTDisplayActionService.Clock clock);
+        public IRenderService Clock(RenderActions.Clock clock);
 
-        public IIoTDisplayRenderService ClockClear();
+        public IRenderService ClockClear();
 
-        public IIoTDisplayRenderService ClockImage(IoTDisplayActionService.ClockImage clockImage);
+        public IRenderService ClockImage(RenderActions.ClockImage clockImage);
 
-        public IIoTDisplayRenderService ClockDraw(IoTDisplayActionService.ClockDraw clockDraw);
+        public IRenderService ClockDraw(RenderActions.ClockDraw clockDraw);
 
-        public IIoTDisplayRenderService ClockTime(IoTDisplayActionService.ClockTime clockTime);
+        public IRenderService ClockTime(RenderActions.ClockTime clockTime);
 
-        public IIoTDisplayRenderService ClockDelete(IoTDisplayActionService.ClockDelete clockDelete);
+        public IRenderService ClockDelete(RenderActions.ClockDelete clockDelete);
 
         #endregion Methods (Public)
     }

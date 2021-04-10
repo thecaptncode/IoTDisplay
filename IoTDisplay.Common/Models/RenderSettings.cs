@@ -16,7 +16,7 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.Common
+namespace IoTDisplay.Common.Models
 {
     #region Using
 
@@ -25,7 +25,7 @@ namespace IoTDisplay.Common
 
     #endregion Using
 
-    public class IoTDisplayRenderSettings
+    public class RenderSettings
     {
         #region Properties
 
@@ -41,7 +41,7 @@ namespace IoTDisplay.Common
 
         #region Constructor
 
-        public IoTDisplayRenderSettings()
+        public RenderSettings()
         {
             if (Width < 1 || Width > 9999)
             {

@@ -21,8 +21,10 @@ namespace IoTDisplay.Api
     #region Using
 
     using System;
+    using System.ComponentModel;
     using System.IO;
     using IoTDisplay.Common.Helpers;
+    using IoTDisplay.Common.Models;
     using IoTDisplay.Common.Services;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
@@ -30,6 +32,7 @@ namespace IoTDisplay.Api
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.OpenApi.Models;
+    using SkiaSharp;
 
     #endregion Using
 
@@ -54,14 +57,15 @@ namespace IoTDisplay.Api
 
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
+            TypeDescriptor.AddAttributes(typeof(SKColor), new TypeConverterAttribute(typeof(SKColorTypeConverter)));
+            Configuration = configuration.GetSection("Api").Get<AppSettings.Api>();
         }
 
         #endregion Constructor
 
         #region Properties
 
-        public IConfiguration Configuration { get; }
+        public AppSettings.Api Configuration { get; }
 
         #endregion Properties
 
@@ -84,7 +88,7 @@ namespace IoTDisplay.Api
                 }
             });
 
-            IIoTDisplayService ioTDisplayService = IoTDisplayServiceHelper.GetService(Configuration);
+            IDisplayService ioTDisplayService = DisplayServiceHelper.GetService(Configuration);
             services.AddSingleton(ioTDisplayService);
         }
 

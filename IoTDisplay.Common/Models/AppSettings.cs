@@ -16,28 +16,27 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.Common.Services
+namespace IoTDisplay.Common.Models
 {
-    #region Using
-
     using System;
+    using SkiaSharp;
 
-    #endregion Using
-
-    public interface IIoTDisplayService
+    public class AppSettings
     {
-        #region Properties
+        public class Api
+        {
+            public string DriverType { get; set; } = "eXoCooLd.Waveshare.EPaperDisplay";
+            public string Driver { get; set; } = "none";
+            public TimeSpan RefreshTime { get; set; } = default;
+            public int Rotation { get; set; }
+            public string StateFolder { get; set; }
+            public SKColor BackgroundColor { get; set; } = SKColors.White;
+            public SKColor ForegroundColor { get; set; } = SKColors.Black;
+        }
 
-        public IIoTDisplayRenderService Renderer { get; }
-
-        public IoTDisplayRenderSettings Settings { get; }
-
-        public string DriverName { get; }
-
-        public TimeSpan RefreshTime { get; }
-
-        public DateTime LastUpdated { get; }
-
-        #endregion Properties
+        public class Console
+        {
+            public string BaseUrl { get; set; } = "http://localhost:5000/api/Action/";
+        }
     }
 }

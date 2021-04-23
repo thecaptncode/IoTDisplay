@@ -19,19 +19,27 @@
 namespace IoTDisplay.Common.Models
 {
     using System;
+    using System.Collections.Generic;
     using SkiaSharp;
 
     public class AppSettings
     {
         public class Api
         {
-            public string DriverType { get; set; } = "eXoCooLd.Waveshare.EPaperDisplay";
-            public string Driver { get; set; } = "none";
+            public List<DriverDetails> Drivers { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
             public TimeSpan RefreshTime { get; set; } = default;
             public int Rotation { get; set; }
             public string StateFolder { get; set; }
             public SKColor BackgroundColor { get; set; } = SKColors.White;
             public SKColor ForegroundColor { get; set; } = SKColors.Black;
+
+            public class DriverDetails
+            {
+                public string DriverType { get; set; }
+                public string Driver { get; set; }
+            }
         }
 
         public class Console

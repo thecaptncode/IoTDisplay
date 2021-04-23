@@ -21,7 +21,9 @@ namespace IoTDisplay.Common.Helpers
     #region Using
 
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Net.Sockets;
     using IoTDisplay.Common.Models;
     using IoTDisplay.Common.Services;
     using Waveshare.Devices;
@@ -32,7 +34,7 @@ namespace IoTDisplay.Common.Helpers
     {
         #region Methods (Public)
 
-        public static IDisplayService GetService(AppSettings.Api Configuration)
+        public static IRenderService GetService(AppSettings.Api Configuration)
         {
             // Configuration settings are obtained from appsettings.json)
             if (Configuration.Rotation != 0 && Configuration.Rotation != 90 && Configuration.Rotation != 180 && Configuration.Rotation != 270)
@@ -60,19 +62,57 @@ namespace IoTDisplay.Common.Helpers
                 throw new ArgumentException("StateFolder does not point to an existing folder", nameof(Configuration));
             }
 
-            IRenderService renderer = new RenderService();
-
             RenderSettings settings = new ()
             {
+                Width = Configuration.Width,
+                Height = Configuration.Height,
                 Rotation = Configuration.Rotation,
                 Statefolder = Configuration.StateFolder,
                 Background = Configuration.BackgroundColor,
-                Foreground = Configuration.ForegroundColor
+                Foreground = Configuration.ForegroundColor,
+                IncludeCommand = false
             };
 
-            EPaperDisplayType screenDriver = (EPaperDisplayType)System.Enum.Parse(typeof(EPaperDisplayType), Configuration.Driver, true);
+            IClockManagerService clocks = new ClockManagerService();
+            List<IDisplayService> displays = new ();
+            foreach (AppSettings.Api.DriverDetails driver in Configuration.Drivers)
+            {
+                if (driver.DriverType.Equals("eXoCooLd.Waveshare.EPaperDisplay", StringComparison.OrdinalIgnoreCase))
+                {
+                    EPaperDisplayType screenDriver;
+                    try
+                    {
+                        screenDriver = (EPaperDisplayType)System.Enum.Parse(typeof(EPaperDisplayType), driver.Driver, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException("Unable to find eXoCooLd.Waveshare.EPaperDisplay driver", nameof(Configuration), ex);
+                    }
 
-            return new WsEPaperDisplayService(screenDriver, renderer, settings, Configuration.RefreshTime);
+                    displays.Add(new WsEPaperDisplayService(screenDriver, Configuration.RefreshTime));
+                }
+                else if (driver.DriverType.Equals("IPCSocket", StringComparison.OrdinalIgnoreCase))
+                {
+                    Socket screenDriver = new (AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                    try
+                    {
+                        if (File.Exists(driver.Driver))
+                        {
+                            File.Delete(driver.Driver);
+                        }
+
+                        screenDriver.Bind(new UnixDomainSocketEndPoint(driver.Driver));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException("Unable to establish IPCSocket end point", nameof(Configuration), ex);
+                    }
+
+                    displays.Add(new SocketDisplayService(screenDriver));
+                }
+            }
+
+            return new RenderService(settings, clocks, displays);
         }
 
         #endregion Methods (Public)

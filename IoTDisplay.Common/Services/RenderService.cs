@@ -23,14 +23,10 @@ namespace IoTDisplay.Common.Services
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Text;
     using System.Text.Json;
     using System.Threading;
-    using System.Xml;
     using IoTDisplay.Common.Models;
     using SkiaSharp;
-    using Svg.Skia;
-    using TimeZoneConverter;
 
     #endregion Using
 
@@ -40,15 +36,19 @@ namespace IoTDisplay.Common.Services
 
         public event EventHandler ScreenChanged;
 
+        public RenderSettings Settings => _settings;
+
+        public List<IDisplayService> Displays => _displays;
+
+        public IClockManagerService Clocks => _clocks;
+
         public Stream Screen => GetScreen();
 
         #endregion Properties and Events
 
         #region Methods (Public)
 
-        public void Create(RenderSettings settings) => SetScreen(settings);
-
-        public IRenderService Clear() => ClearScreen();
+        public IRenderService Clear() => ClearScreen(true);
 
         public IRenderService Refresh() => RefreshScreen();
 
@@ -61,17 +61,7 @@ namespace IoTDisplay.Common.Services
         public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true) =>
             AddText(text, bold, persist);
 
-        public IRenderService Clock(RenderActions.Clock clock) => AddClock(clock);
-
-        public IRenderService ClockClear() => ClearClocks();
-
-        public IRenderService ClockImage(RenderActions.ClockImage clockImage) => AddClock(clockImage);
-
-        public IRenderService ClockDraw(RenderActions.ClockDraw clockDraw) => AddClock(clockDraw);
-
-        public IRenderService ClockTime(RenderActions.ClockTime clockTime) => AddClock(clockTime);
-
-        public IRenderService ClockDelete(RenderActions.ClockDelete clockDelete) => DeleteClock(clockDelete);
+        public bool RenderCommand(RenderActions.RenderCommand command) => ProcessCommand(command);
 
         #endregion Methods (Public)
 
@@ -79,90 +69,78 @@ namespace IoTDisplay.Common.Services
 
         private readonly object _exportLock = new ();
 
-        private RenderSettings _settings;
+        private readonly int _exportLockTimeout = 10000;
 
-        private SKBitmap _screen;
+        private readonly RenderSettings _settings = null;
 
-        private SKCanvas _canvas;
+        private readonly IClockManagerService _clocks;
 
-        private IDictionary<string, ClockService> _clocks;
+        private readonly List<IDisplayService> _displays;
+
+        private readonly SKBitmap _screen;
+
+        private readonly SKCanvas _canvas;
 
         #endregion Fields
 
         #region Constructor
 
-        public RenderService()
+        public RenderService(RenderSettings settings, IClockManagerService clocks, List<IDisplayService> displays)
         {
+            foreach (IDisplayService display in displays)
+            {
+                display.Configure(this, settings);
+            }
+
+            clocks.Configure(this, settings);
+
+            _displays = displays;
+            _settings = settings;
+            _clocks = clocks;
+            _screen = new (_settings.Width, _settings.Height);
+            _canvas = new (_screen);
+            _canvas.Clear(_settings.Background);
+            Import(true);
         }
 
         #endregion Constructor
 
         #region Methods (Protected)
 
-        protected virtual void OnScreenChanged(int x, int y, int width, int height, bool delay)
+        protected virtual void OnScreenChanged(int x, int y, int width, int height, bool delay, bool persist, string command, string values)
         {
-            ScreenChangedEventArgs evt = new (x, y, width, height, delay);
-            ScreenChanged?.Invoke(this, evt);
+            if (persist)
+            {
+                Export(command + (values == null ? string.Empty : "\t" + values));
+            }
+
+            // Clip to ensure dimensions are within screen
+            int hoffset = x < 0 ? 0 - x : 0;
+            x += hoffset;
+            width -= hoffset;
+
+            int voffset = y < 0 ? 0 - y : 0;
+            y += voffset;
+            height -= voffset;
+
+            if (x < _settings.Width && y < _settings.Height)
+            {
+                ScreenChangedEventArgs evt = new ()
+                {
+                    X = x,
+                    Y = y,
+                    Width = Math.Min(width, _settings.Width - x),
+                    Height = Math.Min(height, _settings.Height - y),
+                    Delay = delay,
+                    Command = _settings.IncludeCommand ? new RenderActions.RenderCommand { CommandName = command, CommandValues = values } : null
+                };
+                ScreenChanged?.Invoke(this, evt);
+            }
         }
 
         #endregion Methods (Protected)
 
         #region Methods (Private)
-
-        private static SKTypeface GetTypeface(string font, int weight, int width)
-        {
-            SKTypeface typeface = null;
-            if (!string.IsNullOrWhiteSpace(font))
-            {
-                try
-                {
-                    if (File.Exists(font))
-                    {
-                        typeface = SKTypeface.FromFile(font);
-                    }
-                    else if (weight > 0 && width > 0)
-                    {
-                        typeface = SKTypeface.FromFamilyName(font, weight, width, SKFontStyleSlant.Upright);
-                    }
-                    else if (weight > 0)
-                    {
-                        typeface = SKTypeface.FromFamilyName(font, weight, 5, SKFontStyleSlant.Upright);
-                    }
-                    else if (width > 0)
-                    {
-                        typeface = SKTypeface.FromFamilyName(font, 400, width, SKFontStyleSlant.Upright);
-                    }
-                    else
-                    {
-                        typeface = SKTypeface.FromFamilyName(font);
-                    }
-                }
-                catch
-                {
-                    typeface = null;
-                }
-            }
-
-            return typeface;
-        }
-
-        private static string CleanFileName(string name)
-        {
-            string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(System.IO.Path.GetInvalidFileNameChars()));
-            string invalidRegStr = string.Format(@"([{0}]*\/\\\.+$)|([{0}]+)", invalidChars);
-
-            return System.Text.RegularExpressions.Regex.Replace(name, invalidRegStr, "_");
-        }
-
-        private void SetScreen(RenderSettings settings)
-        {
-            _settings = settings;
-            _screen = new (_settings.Width, _settings.Height);
-            _canvas = new (_screen);
-            _canvas.Clear(_settings.Background);
-            _clocks = new Dictionary<string, ClockService>();
-            Import(true);
-        }
 
         private Stream GetScreen()
         {
@@ -265,24 +243,27 @@ namespace IoTDisplay.Common.Services
             return memStream;
         }
 
-        private IRenderService ClearScreen()
+        private IRenderService ClearScreen(bool clearState)
         {
             _canvas.Clear(_settings.Background);
 
-            string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
-            string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
-
-            if (File.Exists(screenpath))
+            if (clearState)
             {
-                File.Delete(screenpath);
+                string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
+                string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
+
+                if (File.Exists(screenpath))
+                {
+                    File.Delete(screenpath);
+                }
+
+                if (File.Exists(commandpath))
+                {
+                    File.Delete(commandpath);
+                }
             }
 
-            if (File.Exists(commandpath))
-            {
-                File.Delete(commandpath);
-            }
-
-            OnScreenChanged(-1, -1, -1, -1, false);
+            OnScreenChanged(0, 0, _settings.Width, _settings.Height, false, false, "clear", null);
             return this;
         }
 
@@ -291,7 +272,7 @@ namespace IoTDisplay.Common.Services
             _canvas.Clear(_settings.Background);
             Import(false);
 
-            OnScreenChanged(-1, -1, -1, -1, false);
+            OnScreenChanged(0, 0, _settings.Width, _settings.Height, false, false, "refresh", null);
             return this;
         }
 
@@ -301,7 +282,7 @@ namespace IoTDisplay.Common.Services
             int height = 0;
             try
             {
-                using SKBitmap img = GetImage(image.X, image.Y, image.Filename);
+                using SKBitmap img = RenderTools.GetImage(_settings, image.X, image.Y, image.Filename);
                 _canvas.DrawBitmap(img, image.X, image.Y);
                 width = img.Width;
                 height = img.Height;
@@ -313,19 +294,11 @@ namespace IoTDisplay.Common.Services
             catch (Exception ex)
             {
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentException("An unknown exception occured trying to add image to the canvas:" + ex.Message, nameof(image.Filename));
+                throw new ArgumentException("An exception occurred trying to add image to the canvas: " + ex.Message, nameof(image.Filename), ex);
 #pragma warning restore CA2208 // Instantiate argument exceptions correctly
             }
 
-            if (persist)
-            {
-                bool saveDelay = image.Delay;
-                image.Delay = true;
-                Export("image\t" + JsonSerializer.Serialize<RenderActions.Image>(image));
-                image.Delay = saveDelay;
-            }
-
-            OnScreenChanged(image.X, image.Y, width, height, image.Delay);
+            OnScreenChanged(image.X, image.Y, width, height, image.Delay, persist, "image", JsonSerializer.Serialize<RenderActions.Image>(image));
             return this;
         }
 
@@ -333,7 +306,7 @@ namespace IoTDisplay.Common.Services
         {
             try
             {
-                using SKImage img = GetPicture(draw.X, draw.Y, draw.Width, draw.Height, draw.SvgCommands);
+                using SKImage img = RenderTools.GetPicture(_settings, draw.X, draw.Y, draw.Width, draw.Height, draw.SvgCommands);
                 _canvas.DrawImage(img, draw.X, draw.Y);
             }
             catch (ArgumentException)
@@ -343,19 +316,11 @@ namespace IoTDisplay.Common.Services
             catch (Exception ex)
             {
 #pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentException("An unknown exception occured trying to add drawing to the canvas:" + ex.Message, nameof(draw.SvgCommands));
+                throw new ArgumentException("An exception occurred trying to add drawing to the canvas: " + ex.Message, nameof(draw.SvgCommands), ex);
 #pragma warning restore CA2208 // Instantiate argument exceptions correctly
             }
 
-            if (persist)
-            {
-                bool saveDelay = draw.Delay;
-                draw.Delay = true;
-                Export("draw\t" + JsonSerializer.Serialize<RenderActions.Draw>(draw));
-                draw.Delay = saveDelay;
-            }
-
-            OnScreenChanged(draw.X, draw.Y, draw.Width, draw.Height, draw.Delay);
+            OnScreenChanged(draw.X, draw.Y, draw.Width, draw.Height, draw.Delay, persist, "draw", JsonSerializer.Serialize<RenderActions.Draw>(draw));
             return this;
         }
 
@@ -375,11 +340,11 @@ namespace IoTDisplay.Common.Services
 
             text.Value = text.Value.Replace("\r", " ").Replace("\n", string.Empty);
             SKPaint paint = null;
+            int hoffset, voffset, left, top;
             try
             {
-                int hoffset, voffset;
-                (paint, width, height, hoffset, voffset) = GetPaint(text.X, text.Y, text.Value, text.HorizAlign, text.VertAlign,
-                    text.Font, text.FontSize, text.FontWeight, text.FontWidth, text.HexColor, bold);
+                (paint, width, height, hoffset, voffset, left, top) = RenderTools.GetPaint(_settings, text.X, text.Y, text.Value,
+                    text.HorizAlign, text.VertAlign, text.Font, text.FontSize, text.FontWeight, text.FontWidth, text.HexColor, bold);
                 _canvas.DrawText(text.Value, text.X + hoffset, text.Y + voffset, paint);
             }
             catch (ArgumentException)
@@ -388,7 +353,7 @@ namespace IoTDisplay.Common.Services
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("An unknown exception occured trying to add text to the canvas:" + ex.Message, nameof(text));
+                throw new ArgumentException("An exception occurred trying to add text to the canvas:" + ex.Message, nameof(text), ex);
             }
             finally
             {
@@ -398,427 +363,63 @@ namespace IoTDisplay.Common.Services
                 }
             }
 
-            if (persist)
-            {
-                bool saveDelay = text.Delay;
-                text.Delay = true;
-                Export("text\t" + JsonSerializer.Serialize<RenderActions.Text>(text));
-                text.Delay = saveDelay;
-            }
-
-            OnScreenChanged(text.X, text.Y, width, height, text.Delay);
+            OnScreenChanged(left, top, width, height, text.Delay, persist, "text", JsonSerializer.Serialize<RenderActions.Text>(text));
             return this;
         }
 
-        private IRenderService ClearClocks()
+        private bool ProcessCommand(RenderActions.RenderCommand command)
         {
-            int clocksecond = DateTime.Now.Second;
-            if (clocksecond > 48)
-            {
-                Thread.Sleep((61 - clocksecond) * 1000);
-            }
-
-            foreach (KeyValuePair<string, ClockService> clock in _clocks)
-            {
-                DeleteClock(new () { Timezone = clock.Value.TimeZoneId });
-            }
-
-            return this;
-        }
-
-        private IRenderService AddClock(RenderActions.Clock clock)
-        {
-            string tzId;
+            JsonSerializerOptions options = new () { AllowTrailingCommas = true };
             try
             {
-                tzId = GetTimeZoneID(clock.Timezone, false);
-            }
-            catch
-            {
-                throw;
-            }
-
-            if (_clocks.ContainsKey(tzId))
-            {
-                _clocks[tzId].Dispose();
-                _clocks.Remove(tzId);
-            }
-
-            _clocks.Add(tzId, new (this, tzId, _settings.Background.ToString(), string.Empty));
-            ExportClocks(false);
-            return this;
-        }
-
-        private IRenderService AddClock(RenderActions.ClockImage clockImage)
-        {
-            string tzId;
-            int width = 0;
-            int height = 0;
-            try
-            {
-                tzId = GetTimeZoneID(clockImage.Timezone, true);
-                using SKBitmap img = GetImage(clockImage.X, clockImage.Y, clockImage.Filename);
-                width = img.Width;
-                height = img.Height;
-            }
-            catch (ArgumentException)
-            {
-                throw;
-            }
-
-            _clocks[tzId].AddImage(clockImage, width, height);
-            ExportClock(tzId);
-            return this;
-        }
-
-        private IRenderService AddClock(RenderActions.ClockDraw clockDraw)
-        {
-            string tzId;
-            if (!string.IsNullOrEmpty(clockDraw.SvgCommands))
-            {
-                clockDraw.SvgCommands = clockDraw.SvgCommands.Replace("\r", " ").Replace("\n", string.Empty);
-            }
-
-            try
-            {
-                tzId = GetTimeZoneID(clockDraw.Timezone, true);
-                using SKImage img = GetPicture(clockDraw.X, clockDraw.Y, clockDraw.Width, clockDraw.Height,
-                    clockDraw.SvgCommands);
-            }
-            catch
-            {
-                throw;
-            }
-
-            _clocks[tzId].AddDraw(clockDraw);
-            ExportClock(tzId);
-            return this;
-        }
-
-        private IRenderService AddClock(RenderActions.ClockTime clockTime)
-        {
-            string tzId;
-            int width;
-            int height;
-            if (clockTime.FontSize == 0)
-            {
-                clockTime.FontSize = 32;
-            }
-
-            try
-            {
-                tzId = GetTimeZoneID(clockTime.Timezone, true);
-            }
-            catch
-            {
-                throw;
-            }
-
-            string testtime;
-            if (string.IsNullOrWhiteSpace(clockTime.Formatstring))
-            {
-                clockTime.Formatstring = "t";
-            }
-            else
-            {
-                clockTime.Formatstring = clockTime.Formatstring.Replace("\r", " ").Replace("\n", string.Empty);
-            }
-
-            try
-            {
-                testtime = new DateTime(2000, 10, 20, 20, 50, 50).ToString(clockTime.Formatstring);
-            }
-            catch
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentException("Invalid time format string", nameof(clockTime.Formatstring));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
-
-            try
-            {
-                (_, width, height, _, _) = GetPaint(clockTime.X, clockTime.Y, testtime, clockTime.HorizAlign, clockTime.VertAlign,
-                    clockTime.Font, clockTime.FontSize, clockTime.FontWeight, clockTime.FontWidth, clockTime.TextColor, true);
-            }
-            catch (ArgumentException)
-            {
-                throw;
-            }
-
-            _clocks[tzId].AddTime(clockTime, width, height);
-            ExportClock(tzId);
-            return this;
-        }
-
-        private IRenderService DeleteClock(RenderActions.ClockDelete clockDelete)
-        {
-            string tzId;
-            try
-            {
-                tzId = GetTimeZoneID(clockDelete.Timezone, true);
-            }
-            catch
-            {
-                throw;
-            }
-
-            _clocks[tzId].Dispose();
-            _clocks.Remove(tzId);
-            string filepath = _settings.Statefolder + "IoTDisplayClock-" + CleanFileName(tzId) + ".json";
-            if (File.Exists(filepath))
-            {
-                File.Delete(filepath);
-            }
-
-            ExportClocks(false);
-            return this;
-        }
-
-        private string GetTimeZoneID(string timezone, bool verifyExists)
-        {
-            TimeZoneInfo tzi;
-            if (string.IsNullOrWhiteSpace(timezone))
-            {
-                tzi = TimeZoneInfo.Local;
-            }
-            else
-            {
-                try
+                switch (command.CommandName.ToLower())
                 {
-                    tzi = TZConvert.GetTimeZoneInfo(timezone) ?? throw new ArgumentException("Time zone could not be found", nameof(timezone));
-                }
-                catch
-                {
-                    throw new ArgumentException("Time zone could not be found", nameof(timezone));
+                    case "image":
+                        RenderActions.Image image = JsonSerializer.Deserialize<RenderActions.Image>(command.CommandValues, options);
+                        image.Delay = true;
+                        AddImage(image, false);
+                        break;
+                    case "draw":
+                        RenderActions.Draw draw = JsonSerializer.Deserialize<RenderActions.Draw>(command.CommandValues, options);
+                        draw.Delay = true;
+                        AddDraw(draw, false);
+                        break;
+                    case "text":
+                        RenderActions.Text text = JsonSerializer.Deserialize<RenderActions.Text>(command.CommandValues, options);
+                        text.Delay = true;
+                        AddText(text, false, false);
+                        break;
+                    case "clear":
+                        ClearScreen(true);
+                        break;
+                    case "refresh":
+                        RefreshScreen();
+                        break;
+                    case "update":
+                        break;
+                    default:
+                        return false;
                 }
             }
-
-            if (verifyExists && !_clocks.ContainsKey(tzi.Id))
+            catch (Exception ex)
             {
-                throw new ArgumentException("Clock not found for this time zone", nameof(timezone));
+                throw new ArgumentException("An exception occurred processing render command", nameof(command), ex);
             }
 
-            return tzi.Id;
-        }
-
-        private SKBitmap GetImage(int x, int y, string filename)
-        {
-            SKBitmap img = null;
-            if (x < 0 || x >= _settings.Width)
-            {
-                throw new ArgumentOutOfRangeException(nameof(x), x, "X coordinate is not within the screen");
-            }
-
-            if (y < 0 || y >= _settings.Height)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, "Y coordinate is not within the screen");
-            }
-
-            if (File.Exists(filename))
-            {
-                try
-                {
-                    img = SKBitmap.Decode(filename) ?? throw new ArgumentException("Unable to decode image", nameof(filename));
-                }
-                catch (Exception ex)
-                {
-                    if (img != null)
-                    {
-                        img.Dispose();
-                    }
-
-                    throw new ArgumentException("An unknown exception occured trying to load image:" + ex.Message, nameof(filename));
-                }
-            }
-            else
-            {
-                throw new ArgumentException("File not found", nameof(filename));
-            }
-
-            return img;
-        }
-
-        private SKImage GetPicture(int x, int y, int width, int height, string svgCommands)
-        {
-            if (x < 0 || x >= _settings.Width)
-            {
-                throw new ArgumentOutOfRangeException(nameof(x), x, "X coordinate is not within the screen");
-            }
-
-            if (y < 0 || y >= _settings.Height)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, "Y coordinate is not within the screen");
-            }
-
-            if (width <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(width), width, "Width must be greater than zero");
-            }
-
-            if (height <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(height), height, "Height must be greater than zero");
-            }
-
-            if (string.IsNullOrWhiteSpace(svgCommands))
-            {
-                svgCommands = _settings.Foreground.ToString();
-            }
-
-            if (SKColor.TryParse(svgCommands, out _))
-            {
-                svgCommands = "<rect width=\"" + width.ToString() + "\" height=\"" + height.ToString() + "\" fill=\"" + svgCommands + "\" />";
-            }
-
-            byte[] fullSVG = Encoding.UTF8.GetBytes("<svg version=\"1.2\" baseProfile=\"full\" width=\"" + width.ToString() + "\" height=\"" +
-                height.ToString() + "\" " + "xmlns=\"http://www.w3.org/2000/svg\">" + svgCommands + "</svg>");
-            SKImage img;
-            try
-            {
-                SKSvg svg = new ();
-                using MemoryStream stream = new (fullSVG);
-                using SKPicture pict = svg.Load(stream);
-                SKSizeI dimen = new (
-                    (int)Math.Ceiling(pict.CullRect.Width),
-                    (int)Math.Ceiling(pict.CullRect.Height));
-                img = SKImage.FromPicture(pict, dimen, SKMatrix.CreateScale(1, 1)) ?? throw new ArgumentException("Invalid SVG command", nameof(svgCommands));
-                stream.Close();
-            }
-            catch (XmlException)
-            {
-                throw new ArgumentException("The SVG commands could not be parsed", nameof(svgCommands));
-            }
-
-            return img;
-        }
-
-        private (SKPaint paint, int width, int height, int hoffset, int voffset) GetPaint(int x, int y, string text, int horizAlign, int vertAlign,
-            string font, float fontSize, int fontWeight, int fontWidth, string hexColor, bool bold)
-        {
-            if (x < 0 || x >= _settings.Width)
-            {
-                throw new ArgumentOutOfRangeException(nameof(x), x, "X coordinate is not within the screen");
-            }
-
-            if (y < 0 || y >= _settings.Height)
-            {
-                throw new ArgumentOutOfRangeException(nameof(y), y, "Y coordinate is not within the screen");
-            }
-
-            if (horizAlign < -1 || horizAlign > 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(horizAlign), horizAlign, "Horizontal alignment must be -1, 0 or 1");
-            }
-
-            if (vertAlign < -1 || vertAlign > 1)
-            {
-                throw new ArgumentOutOfRangeException(nameof(vertAlign), vertAlign, "Vertical alignment must be -1, 0 or 1");
-            }
-
-            if (fontSize <= 0 || fontSize > 9999)
-            {
-                throw new ArgumentOutOfRangeException(nameof(fontSize), fontSize, "Font size must be greater than zero and less than 10000");
-            }
-
-            if ((fontWeight < 100 && fontWeight != 0) || fontWeight > 900)
-            {
-                throw new ArgumentOutOfRangeException(nameof(fontWeight), fontWeight, "Font weight must be between 100 and 900");
-            }
-
-            if (fontWidth < 0 || fontWidth > 9)
-            {
-                throw new ArgumentOutOfRangeException(nameof(fontWidth), fontWidth, "Font width must be between 1 and to 9");
-            }
-
-            SKPaint paint = new ()
-            {
-                TextSize = fontSize,
-                IsAntialias = true,
-            };
-            if (!string.IsNullOrWhiteSpace(font))
-            {
-                paint.Typeface = GetTypeface(font, fontWeight, fontWidth) ?? throw new ArgumentException("Font not found", nameof(font));
-            }
-
-            if (string.IsNullOrWhiteSpace(hexColor))
-            {
-                paint.Color = new (0, 0, 0);
-            }
-            else
-            {
-                try
-                {
-                    paint.Color = SKColor.Parse(hexColor);
-                }
-                catch (ArgumentException)
-                {
-                    throw new ArgumentException("Invalid hexColor", nameof(hexColor));
-                }
-            }
-
-            paint.FakeBoldText = bold;
-            paint.IsStroke = false;
-            SKRect bound = new ();
-            float width = paint.MeasureText(text, ref bound);
-            float height = bound.Height;
-            float hoffset;
-            if (horizAlign == -1)
-            {
-                hoffset = bound.Left - 1;
-            }
-            else if (horizAlign == 1)
-            {
-                hoffset = 1 - bound.Right;
-            }
-            else
-            {
-                hoffset = 1 - bound.MidX;
-            }
-
-            float voffset;
-            if (vertAlign == -1)
-            {
-                voffset = 1 - bound.Top;
-            }
-            else if (vertAlign == 1)
-            {
-                voffset = bound.Bottom - 1;
-            }
-            else
-            {
-                voffset = 1 - bound.MidY;
-            }
-
-            return (paint, (int)Math.Round(width), (int)Math.Round(height), (int)Math.Round(hoffset), (int)Math.Round(voffset));
-        }
-
-        private void ExportClock(string TimeZoneId)
-        {
-            string filepath = _settings.Statefolder + "IoTDisplayClock-" + CleanFileName(TimeZoneId) + ".json";
-
-            using FileStream fs = new (filepath, FileMode.Create, FileAccess.Write, FileShare.Read);
-            fs.Write(Encoding.UTF8.GetBytes(_clocks[TimeZoneId].ToString()));
-        }
-
-        private void ExportClocks(bool clockState)
-        {
-            string filepath = _settings.Statefolder + "IoTDisplayClocks.txt";
-
-            using FileStream fs = new (filepath, FileMode.Create, FileAccess.Write, FileShare.Read);
-            foreach (KeyValuePair<string, ClockService> clock in _clocks)
-            {
-                fs.Write(Encoding.UTF8.GetBytes(clock.Key + "\n"));
-                if (clockState)
-                {
-                    ExportClock(clock.Key);
-                }
-            }
+            return true;
         }
 
         private void Export(string command)
         {
-            lock (_exportLock)
+            bool lockSuccess = false;
+            try
             {
+                Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
+                if (!lockSuccess)
+                {
+                    throw new TimeoutException("A wait for export lock timed out.");
+                }
+
                 string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
                 string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
 
@@ -842,18 +443,36 @@ namespace IoTDisplay.Common.Services
                     }
 
                     File.Delete(commandpath);
-                    ExportClocks(true);
+                    _clocks.Export();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An exception occurred exporting command " + command + ". " + ex.Message);
+            }
+            finally
+            {
+                if (lockSuccess)
+                {
+                    Monitor.Exit(_exportLock);
                 }
             }
         }
 
         private void Import(bool addClocks)
         {
-            lock (_exportLock)
+            bool lockSuccess = false;
+            try
             {
+                Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
+                if (!lockSuccess)
+                {
+                    throw new TimeoutException("A wait for export lock timed out.");
+                }
+
+                ClearScreen(false);
                 string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
                 string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
-                string clockpath = _settings.Statefolder + "IoTDisplayClocks.txt";
                 bool updated = false;
                 if (File.Exists(screenpath))
                 {
@@ -865,56 +484,39 @@ namespace IoTDisplay.Common.Services
                 if (File.Exists(commandpath))
                 {
                     using StreamReader sr = File.OpenText(commandpath);
-                    JsonSerializerOptions options = new () { AllowTrailingCommas = true };
                     string command = string.Empty;
                     while ((command = sr.ReadLine()) != null)
                     {
                         if (!string.IsNullOrWhiteSpace(command))
                         {
-                            string[] cmd = command.Split('\t');
-                            switch (cmd[0])
+                            string[] cmd = command.Split('\t', 2);
+                            try
                             {
-                                case "image":
-                                    AddImage(JsonSerializer.Deserialize<RenderActions.Image>(cmd[1], options), false);
+                                if (ProcessCommand(new RenderActions.RenderCommand { CommandName = cmd[0], CommandValues = cmd[1] }))
+                                {
                                     updated = true;
-                                    break;
-                                case "draw":
-                                    AddDraw(JsonSerializer.Deserialize<RenderActions.Draw>(cmd[1], options), false);
-                                    updated = true;
-                                    break;
-                                case "text":
-                                    AddText(JsonSerializer.Deserialize<RenderActions.Text>(cmd[1], options), false, false);
-                                    updated = true;
-                                    break;
-                                default:
+                                }
+                                else
+                                {
                                     Console.WriteLine("Unknown render command in state file: " + cmd[0]);
-                                    break;
+                                }
+                            }
+                            catch (ArgumentException ex)
+                            {
+                                Console.Write(ex.Message + " during import: " + ex.InnerException.Message);
                             }
                         }
                     }
                 }
 
-                if (addClocks && File.Exists(clockpath))
+                if (addClocks)
                 {
-                    using StreamReader sr = File.OpenText(clockpath);
-                    string clock = string.Empty;
-                    while ((clock = sr.ReadLine()) != null)
-                    {
-                        string filepath = _settings.Statefolder + "IoTDisplayClock-" + CleanFileName(clock) + ".json";
-                        string json = string.Empty;
-                        if (File.Exists(filepath))
-                        {
-                            json = File.ReadAllText(filepath, Encoding.UTF8);
-                        }
-
-                        Console.WriteLine("Adding clock " + clock + " with state: " + json);
-                        _clocks.Add(clock, new (this, clock, _settings.Background.ToString(), json));
-                    }
+                    _clocks.Import();
                 }
 
                 if (updated)
                 {
-                    OnScreenChanged(-1, -1, -1, -1, false);
+                    OnScreenChanged(0, 0, _settings.Width, _settings.Height, false, false, "update", null);
                 }
                 else
                 {
@@ -929,6 +531,17 @@ namespace IoTDisplay.Common.Services
                     {
                         AddImage(new () { X = 0, Y = 0, Filename = execpath, Delay = false }, false);
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An exception occurred importing commands. " + ex.Message);
+            }
+            finally
+            {
+                if (lockSuccess)
+                {
+                    Monitor.Exit(_exportLock);
                 }
             }
         }

@@ -37,7 +37,7 @@ namespace IoTDisplay.Common.Services
 
         #region Methods (Public)
 
-        public void AddImage(RenderActions.ClockImage clockImage, int width, int height)
+        public void AddImage(ClockActions.ClockImage clockImage, int width, int height)
         {
             RenderCommand cmd = new ()
             {
@@ -51,7 +51,7 @@ namespace IoTDisplay.Common.Services
             _commandlist.Add(cmd);
         }
 
-        public void AddDraw(RenderActions.ClockDraw clockDraw)
+        public void AddDraw(ClockActions.ClockDraw clockDraw)
         {
             RenderCommand cmd = new ()
             {
@@ -65,7 +65,7 @@ namespace IoTDisplay.Common.Services
             _commandlist.Add(cmd);
         }
 
-        public void AddTime(RenderActions.ClockTime clockTime, int width, int height)
+        public void AddTime(ClockActions.ClockTime clockTime, int width, int height)
         {
             RenderCommand cmd = new ()
             {
@@ -256,7 +256,7 @@ namespace IoTDisplay.Common.Services
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine("An arguement exception occured in clock " + TimeZoneId + " on parameter " + ex.ParamName + " with message: " + ex.Message);
+                Console.WriteLine("An arguement exception occurred in clock " + TimeZoneId + " on parameter " + ex.ParamName + " with message: " + ex.Message);
             }
             catch
             {

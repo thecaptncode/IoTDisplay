@@ -20,24 +20,31 @@ namespace IoTDisplay.Common.Services
 {
     #region Using
 
-    using System;
     using IoTDisplay.Common.Models;
 
     #endregion Using
 
-    public interface IDisplayService
+    public interface IClockManagerService
     {
-        #region Properties
-
-        public string DriverName { get; }
-
-        public DateTime LastUpdated { get; }
-
-        #endregion Properties
-
         #region Methods (Public)
 
-        public void Configure(IRenderService renderer, RenderSettings setting);
+        public void Configure(IRenderService renderer, RenderSettings settings);
+
+        public IClockManagerService Clock(ClockActions.Clock clock);
+
+        public IClockManagerService ClockClear();
+
+        public IClockManagerService ClockImage(ClockActions.ClockImage clockImage);
+
+        public IClockManagerService ClockDraw(ClockActions.ClockDraw clockDraw);
+
+        public IClockManagerService ClockTime(ClockActions.ClockTime clockTime);
+
+        public IClockManagerService ClockDelete(ClockActions.ClockDelete clockDelete);
+
+        public void Import();
+
+        public void Export();
 
         #endregion Methods (Public)
     }

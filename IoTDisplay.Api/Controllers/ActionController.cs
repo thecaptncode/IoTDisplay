@@ -38,15 +38,15 @@ namespace IoTDisplay.Api.Controllers
     {
         #region Fields
 
-        private readonly IDisplayService _ioTDisplayService;
+        private readonly IRenderService _renderer;
 
         #endregion Fields
 
         #region Constructor
 
-        public ActionController(IDisplayService ioTDisplayService)
+        public ActionController(IRenderService renderer)
         {
-            _ioTDisplayService = ioTDisplayService;
+            _renderer = renderer;
         }
 
         #endregion Constructor
@@ -65,7 +65,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Screen as a PNG</returns>
         /// <response code="200">The screen was returned</response>
         /// <response code="400">The screen could not be returned</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpGet]
         [Produces("image/png")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
@@ -77,7 +77,7 @@ namespace IoTDisplay.Api.Controllers
             Stream area = null;
             try
             {
-                area = _ioTDisplayService.Renderer.Screen;
+                area = _renderer.Screen;
             }
             catch (ArgumentException ex)
             {
@@ -112,7 +112,16 @@ namespace IoTDisplay.Api.Controllers
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
         public DateTime LastUpdated()
         {
-            return _ioTDisplayService.LastUpdated;
+            DateTime lastUpdated = DateTime.MinValue;
+            foreach (IDisplayService display in _renderer.Displays)
+            {
+                if (display.LastUpdated > lastUpdated)
+                {
+                    lastUpdated = display.LastUpdated;
+                }
+            }
+
+            return lastUpdated;
         }
 
         /// <summary>
@@ -127,7 +136,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The screen will be refreshed</response>
         /// <response code="400">The screen was not refreshed due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpGet]
         [Route("Refresh")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -138,7 +147,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Refresh();
+                _renderer.Refresh();
             }
             catch (ArgumentException ex)
             {
@@ -167,7 +176,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The screen will be cleared</response>
         /// <response code="400">The screen was not cleared due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpGet]
         [Route("Clear")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -178,7 +187,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Clear();
+                _renderer.Clear();
             }
             catch (ArgumentException ex)
             {
@@ -207,7 +216,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The clock will be cleared from the screen</response>
         /// <response code="400">The clock was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpGet]
         [Route("ClockClear")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -218,7 +227,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.ClockClear();
+                _renderer.Clocks.ClockClear();
             }
             catch (ArgumentException ex)
             {
@@ -257,7 +266,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Screen area as a PNG</returns>
         /// <response code="200">The screen area was returned</response>
         /// <response code="400">The screen area could not be returned</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("ScreenAt")]
         [Produces("image/png")]
@@ -270,7 +279,7 @@ namespace IoTDisplay.Api.Controllers
             Stream area = null;
             try
             {
-                area = _ioTDisplayService.Renderer.ScreenAt(screenat);
+                area = _renderer.ScreenAt(screenat);
             }
             catch (ArgumentException ex)
             {
@@ -305,7 +314,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The image will be added to the screen</response>
         /// <response code="400">The image was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("Image")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -316,7 +325,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Image(image);
+                _renderer.Image(image);
             }
             catch (ArgumentException ex)
             {
@@ -353,7 +362,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The drawing will be added to the screen</response>
         /// <response code="400">The drawing was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("Draw")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -364,7 +373,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Draw(draw);
+                _renderer.Draw(draw);
             }
             catch (ArgumentException ex)
             {
@@ -406,7 +415,7 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The text will be added to the screen</response>
         /// <response code="400">The text was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("Text")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
@@ -417,7 +426,7 @@ namespace IoTDisplay.Api.Controllers
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Text(text);
+                _renderer.Text(text);
             }
             catch (ArgumentException ex)
             {
@@ -451,18 +460,18 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The clock will be added to the screen</response>
         /// <response code="400">The clock was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("Clock")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult Clock(RenderActions.Clock clock)
+        public ActionResult Clock(ClockActions.Clock clock)
         {
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.Clock(clock);
+                _renderer.Clocks.Clock(clock);
             }
             catch (ArgumentException ex)
             {
@@ -500,18 +509,18 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The image will be added to the clock</response>
         /// <response code="400">The image was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("ClockImage")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockImage(RenderActions.ClockImage clockImage)
+        public ActionResult ClockImage(ClockActions.ClockImage clockImage)
         {
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.ClockImage(clockImage);
+                _renderer.Clocks.ClockImage(clockImage);
             }
             catch (ArgumentException ex)
             {
@@ -551,18 +560,18 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The drawing will be added to the clock</response>
         /// <response code="400">The drawing was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("ClockDraw")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockDraw(RenderActions.ClockDraw clockDraw)
+        public ActionResult ClockDraw(ClockActions.ClockDraw clockDraw)
         {
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.ClockDraw(clockDraw);
+                _renderer.Clocks.ClockDraw(clockDraw);
             }
             catch (ArgumentException ex)
             {
@@ -605,18 +614,18 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The time area will be added to the clock</response>
         /// <response code="400">The time area was not added due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("ClockTime")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockTime(RenderActions.ClockTime clockTime)
+        public ActionResult ClockTime(ClockActions.ClockTime clockTime)
         {
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.ClockTime(clockTime);
+                _renderer.Clocks.ClockTime(clockTime);
             }
             catch (ArgumentException ex)
             {
@@ -648,18 +657,18 @@ namespace IoTDisplay.Api.Controllers
         /// <returns>Success or failure as a response code</returns>
         /// <response code="202">The clock will be deleted</response>
         /// <response code="400">The clock was not deleted due to an error in the request</response>
-        /// <response code="500">An unknown error occured processing the request</response>
+        /// <response code="500">An unknown error occurred processing the request</response>
         [HttpPost]
         [Route("ClockDelete")]
         [ProducesResponseType((int)HttpStatusCode.Accepted)]
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         [ProducesResponseType((int)HttpStatusCode.InternalServerError)]
-        public ActionResult ClockDelete(RenderActions.ClockDelete clockDelete)
+        public ActionResult ClockDelete(ClockActions.ClockDelete clockDelete)
         {
             string result = null;
             try
             {
-                _ioTDisplayService.Renderer.ClockDelete(clockDelete);
+                _renderer.Clocks.ClockDelete(clockDelete);
             }
             catch (ArgumentException ex)
             {

@@ -88,8 +88,8 @@ namespace IoTDisplay.Api
                 }
             });
 
-            IDisplayService ioTDisplayService = DisplayServiceHelper.GetService(Configuration);
-            services.AddSingleton(ioTDisplayService);
+            IRenderService renderer = DisplayServiceHelper.GetService(Configuration);
+            services.AddSingleton(renderer);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

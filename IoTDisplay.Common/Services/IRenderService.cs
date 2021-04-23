@@ -21,6 +21,7 @@ namespace IoTDisplay.Common.Services
     #region Using
 
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using IoTDisplay.Common.Models;
 
@@ -30,6 +31,12 @@ namespace IoTDisplay.Common.Services
     {
         #region Properties and Events
 
+        public RenderSettings Settings { get; }
+
+        public List<IDisplayService> Displays { get; }
+
+        public IClockManagerService Clocks { get; }
+
         public Stream Screen { get; }
 
         public event EventHandler ScreenChanged;
@@ -37,8 +44,6 @@ namespace IoTDisplay.Common.Services
         #endregion Properties and Events
 
         #region Methods (Public)
-
-        public void Create(RenderSettings settings);
 
         public IRenderService Clear();
 
@@ -52,17 +57,7 @@ namespace IoTDisplay.Common.Services
 
         public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true);
 
-        public IRenderService Clock(RenderActions.Clock clock);
-
-        public IRenderService ClockClear();
-
-        public IRenderService ClockImage(RenderActions.ClockImage clockImage);
-
-        public IRenderService ClockDraw(RenderActions.ClockDraw clockDraw);
-
-        public IRenderService ClockTime(RenderActions.ClockTime clockTime);
-
-        public IRenderService ClockDelete(RenderActions.ClockDelete clockDelete);
+        public bool RenderCommand(RenderActions.RenderCommand command);
 
         #endregion Methods (Public)
     }
@@ -71,26 +66,18 @@ namespace IoTDisplay.Common.Services
 
     public class ScreenChangedEventArgs : System.EventArgs
     {
-        public int X { get; }
+        public int X { get; init; }
 
-        public int Y { get; }
+        public int Y { get; init; }
 
-        public int Width { get; }
+        public int Width { get; init; }
 
-        public int Height { get; }
+        public int Height { get; init; }
 
-        public bool Delay { get; }
+        public bool Delay { get; init; }
 
-        public ScreenChangedEventArgs(int x, int y, int width, int height, bool delay)
-        {
-            X = x;
-            Y = y;
-            Width = width;
-            Height = height;
-            Delay = delay;
-        }
-
-        #endregion EventArgs (Public)
+        public RenderActions.RenderCommand Command { get; init; }
     }
 
+    #endregion EventArgs (Public)
 }

@@ -38,12 +38,12 @@ namespace IoTDisplay.Console
     [VersionOptionFromMember(MemberName = "GetVersion")]
     [Subcommand(
         typeof(RenderActions.Clear),
-        typeof(RenderActions.Clock),
-        typeof(RenderActions.ClockClear),
-        typeof(RenderActions.ClockDelete),
-        typeof(RenderActions.ClockDraw),
-        typeof(RenderActions.ClockImage),
-        typeof(RenderActions.ClockTime),
+        typeof(ClockActions.Clock),
+        typeof(ClockActions.ClockClear),
+        typeof(ClockActions.ClockDelete),
+        typeof(ClockActions.ClockDraw),
+        typeof(ClockActions.ClockImage),
+        typeof(ClockActions.ClockTime),
         typeof(RenderActions.Draw),
         typeof(RenderActions.Get),
         typeof(RenderActions.GetAt),

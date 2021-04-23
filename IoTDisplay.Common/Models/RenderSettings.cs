@@ -29,47 +29,88 @@ namespace IoTDisplay.Common.Models
     {
         #region Properties
 
-        public int Width { get; init; } = 800;
-        public int Height { get; init; } = 480;
+        public int Width
+        {
+            get => _width;
+            init
+            {
+                _width = value;
+            }
+        }
+
+        public int Height
+        {
+            get => _height;
+            init
+            {
+                _height = value;
+            }
+        }
+
         public int Rotation { get; init; }
-        public bool IsPortrait { get; }
+        public bool IsPortrait => _isPortrait;
         public string Statefolder { get; init; }
         public SKColor Background { get; init; }
         public SKColor Foreground { get; init; }
+        public bool IncludeCommand { get; set; }
 
         #endregion Properties
+
+        #region Methods (Public)
+
+        public void Resize(int width, int height) => ChangeScreen(width, height);
+
+        #endregion Methods (Public)
+
+        #region Fields
+
+        private int _width = 800;
+        private int _height = 480;
+        private bool _isPortrait;
+
+        #endregion Fields
 
         #region Constructor
 
         public RenderSettings()
         {
-            if (Width < 1 || Width > 9999)
+            ChangeScreen(Width, Height);
+        }
+
+        #endregion Constructor
+
+        #region Methods (Private)
+
+        private void ChangeScreen(int width, int height)
+        {
+            if (width < 1 || width > 9999)
             {
-                throw new ArgumentException("Width must be greater than 0 and less than 10000", nameof(Width));
+                throw new ArgumentException("Width must be greater than 0 and less than 10000", nameof(width));
             }
 
-            if (Height < 1 || Height > 9999)
+            if (height < 1 || height > 9999)
             {
-                throw new ArgumentException("Height must be greater than 0 and less than 10000", nameof(Height));
+                throw new ArgumentException("Height must be greater than 0 and less than 10000", nameof(height));
             }
 
             if (Rotation == 0 || Rotation == 180)
             {
-                IsPortrait = false;
+                _width = width;
+                _height = height;
+                _isPortrait = false;
             }
             else if (Rotation == 90 || Rotation == 270)
             {
-                IsPortrait = true;
-                int width = Width;
-                Width = Height;
-                Height = width;
+                _width = height;
+                _height = width;
+                _isPortrait = true;
             }
             else
             {
-                throw new ArgumentException("Rotation must be 0, 90, 180 or 270", nameof(Rotation));
+                throw new ArgumentException("Rotation must be 0, 90, 180 or 270");
             }
         }
 
-        #endregion Constructor
+        #endregion Methods (Private)
     }
 }

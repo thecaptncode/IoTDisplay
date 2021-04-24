@@ -18,14 +18,20 @@
 
 namespace IoTDisplay.Common.Models
 {
+    #region Using
+
     using System;
     using System.Collections.Generic;
     using SkiaSharp;
+
+    #endregion Using
 
     public class AppSettings
     {
         public class Api
         {
+            #region Properties (subclass)
+
             public List<DriverDetails> Drivers { get; set; }
             public int Width { get; set; } = 800;
             public int Height { get; set; } = 480;
@@ -34,17 +40,27 @@ namespace IoTDisplay.Common.Models
             public SKColor BackgroundColor { get; set; } = SKColors.White;
             public SKColor ForegroundColor { get; set; } = SKColors.Black;
 
+            #endregion Properties (subclass)
+
             public class DriverDetails
             {
+                #region Properties (subclass)
+
                 public string DriverType { get; set; }
                 public string Driver { get; set; }
                 public TimeSpan RefreshTime { get; set; } = default;
+
+                #endregion Properties (subclass)
             }
         }
 
         public class Console
         {
+            #region Properties (subclass)
+
             public string BaseUrl { get; set; } = "http://localhost:5000/api/Action/";
+
+            #endregion Properties (subclass)
         }
     }
 }

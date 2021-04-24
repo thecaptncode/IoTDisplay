@@ -29,24 +29,8 @@ namespace IoTDisplay.Common.Models
     {
         #region Properties
 
-        public int Width
-        {
-            get => _width;
-            init
-            {
-                _width = value;
-            }
-        }
-
-        public int Height
-        {
-            get => _height;
-            init
-            {
-                _height = value;
-            }
-        }
-
+        public int Width => _width;
+        public int Height => _height;
         public int Rotation { get; init; }
         public bool IsPortrait => _isPortrait;
         public string Statefolder { get; init; }
@@ -74,7 +58,6 @@ namespace IoTDisplay.Common.Models
 
         public RenderSettings()
         {
-            ChangeScreen(Width, Height);
         }
 
         #endregion Constructor
@@ -85,12 +68,12 @@ namespace IoTDisplay.Common.Models
         {
             if (width < 1 || width > 9999)
             {
-                throw new ArgumentException("Width must be greater than 0 and less than 10000", nameof(width));
+                // throw new ArgumentException("Width must be greater than 0 and less than 10000", nameof(width));
             }
 
             if (height < 1 || height > 9999)
             {
-                throw new ArgumentException("Height must be greater than 0 and less than 10000", nameof(height));
+                // throw new ArgumentException("Height must be greater than 0 and less than 10000", nameof(height));
             }
 
             if (Rotation == 0 || Rotation == 180)

@@ -59,14 +59,13 @@ namespace IoTDisplay.Common.Helpers
 
             RenderSettings settings = new ()
             {
-                Width = Configuration.Width,
-                Height = Configuration.Height,
                 Rotation = Configuration.Rotation,
                 Statefolder = Configuration.StateFolder,
                 Background = Configuration.BackgroundColor,
                 Foreground = Configuration.ForegroundColor,
                 IncludeCommand = false
             };
+            settings.Resize(Configuration.Width, Configuration.Height);
 
             IClockManagerService clocks = new ClockManagerService();
             List<IDisplayService> displays = new ();

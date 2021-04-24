@@ -27,9 +27,8 @@ namespace IoTDisplay.Common.Models
         public class Api
         {
             public List<DriverDetails> Drivers { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public TimeSpan RefreshTime { get; set; } = default;
+            public int Width { get; set; } = 800;
+            public int Height { get; set; } = 480;
             public int Rotation { get; set; }
             public string StateFolder { get; set; }
             public SKColor BackgroundColor { get; set; } = SKColors.White;
@@ -39,6 +38,7 @@ namespace IoTDisplay.Common.Models
             {
                 public string DriverType { get; set; }
                 public string Driver { get; set; }
+                public TimeSpan RefreshTime { get; set; } = default;
             }
         }
 

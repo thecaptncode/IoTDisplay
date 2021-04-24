@@ -64,8 +64,8 @@ namespace IoTDisplay.Common.Models
 
         #region Fields
 
-        private int _width = 800;
-        private int _height = 480;
+        private int _width;
+        private int _height;
         private bool _isPortrait;
 
         #endregion Fields

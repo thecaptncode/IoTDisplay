@@ -21,8 +21,8 @@ Here is picture of that in action.
 
 ![Image of display](https://raw.githubusercontent.com/thecaptncode/IoTDisplay/master/Hardware1.jpg)
 
-Currently, this is a work in progress.  Additional details are soon to come.
+The full documentation can be found in the [project Wiki.](https://github.com/thecaptncode/IoTDisplay/wiki)
 
 ### Installation
 
-The installation information can be found in the [project Wiki](https://github.com/thecaptncode/IoTDisplay/wiki/Installation).
+The installation information can be found [here.](https://github.com/thecaptncode/IoTDisplay/wiki/Installation).

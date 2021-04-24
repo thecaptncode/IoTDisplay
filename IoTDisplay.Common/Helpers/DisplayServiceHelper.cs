@@ -42,11 +42,6 @@ namespace IoTDisplay.Common.Helpers
                 throw new ArgumentException("Rotation must be 0, 90, 180 or 270", nameof(Configuration));
             }
 
-            if (Configuration.RefreshTime.Days != 0)
-            {
-                throw new ArgumentException("RefreshTime must not have a day portion", nameof(Configuration));
-            }
-
             if (string.IsNullOrWhiteSpace(Configuration.StateFolder))
             {
                 Configuration.StateFolder = Path.GetTempPath();
@@ -79,17 +74,25 @@ namespace IoTDisplay.Common.Helpers
             {
                 if (driver.DriverType.Equals("eXoCooLd.Waveshare.EPaperDisplay", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (driver.RefreshTime.Days != 0)
+                    {
+                        throw new ArgumentException("RefreshTime must not have a day portion", nameof(Configuration));
+                    }
+
                     EPaperDisplayType screenDriver;
                     try
                     {
-                        screenDriver = (EPaperDisplayType)System.Enum.Parse(typeof(EPaperDisplayType), driver.Driver, true);
+                        screenDriver = (EPaperDisplayType)Enum.Parse(typeof(EPaperDisplayType), driver.Driver, true);
                     }
                     catch (Exception ex)
                     {
                         throw new ArgumentException("Unable to find eXoCooLd.Waveshare.EPaperDisplay driver", nameof(Configuration), ex);
                     }
 
-                    displays.Add(new WsEPaperDisplayService(screenDriver, Configuration.RefreshTime));
+                    if (screenDriver != EPaperDisplayType.None)
+                    {
+                        displays.Add(new WsEPaperDisplayService(screenDriver, driver.RefreshTime));
+                    }
                 }
                 else if (driver.DriverType.Equals("IPCSocket", StringComparison.OrdinalIgnoreCase))
                 {

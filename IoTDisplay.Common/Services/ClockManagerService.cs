@@ -31,7 +31,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class ClockManagerService : IClockManagerService
+    public class ClockManagerService : IClockManagerService, IDisposable
     {
         #region Properties
 
@@ -60,14 +60,45 @@ namespace IoTDisplay.Common.Services
         private readonly IDictionary<string, ClockService> _clocks = new Dictionary<string, ClockService>();
         private IRenderService _renderer;
         private RenderSettings _settings;
+        private bool _disposed = false;
 
         #endregion Fields
 
-        #region Constructor
+        #region Constructor / Dispose / Finalizer
+
         public ClockManagerService()
         {
         }
-        #endregion Constructor
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                foreach (KeyValuePair<string, ClockService> clock in _clocks)
+                {
+                    clock.Value.Dispose();
+                }
+
+                _clocks.Clear();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~ClockManagerService() => Dispose(false);
+
+        #endregion Constructor / Dispose / Finalizer
 
         private void Create(IRenderService renderer, RenderSettings settings)
         {

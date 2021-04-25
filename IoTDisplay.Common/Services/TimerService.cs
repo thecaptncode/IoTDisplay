@@ -25,7 +25,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class TimerService : Timer
+    public class TimerService : Timer, IDisposable
     {
         #region Properties
 
@@ -69,6 +69,7 @@ namespace IoTDisplay.Common.Services
         #region Fields
 
         private DateTime _dueTime;
+        private bool _disposed = false;
 
         #endregion Fields
 
@@ -84,12 +85,30 @@ namespace IoTDisplay.Common.Services
             Elapsed += ElapsedAction;
         }
 
-        protected new void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            Elapsed -= ElapsedAction;
-            base.Dispose();
-            Enabled = true;
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                Elapsed -= ElapsedAction;
+                base.Dispose();
+                Enabled = true;
+            }
+
+            _disposed = true;
         }
+
+        public new void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~TimerService() => Dispose(false);
 
         #endregion Constructor / Dispose / Finalizer
 

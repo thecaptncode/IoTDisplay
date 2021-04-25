@@ -4,9 +4,9 @@ REM specific to your environment.
 REM
 
 echo Deploying...
+dotnet publish -r linux-arm -c Release
 ssh pi@iotdisplay sudo systemctl stop iotdisplay
 scp pi@iotdisplay:/etc/iotdisplay/appsettings.json ./
-dotnet publish -r linux-arm -c Release
 ssh pi@iotdisplay sudo rm /etc/iotdisplay/* /home/pi/epaper/*
 scp ./IoTDisplay.Console/bin/Release/net5.0/linux-arm/publish/* pi@iotdisplay:/home/pi/epaper
 scp ./IoTDisplay.Api/bin/Release/net5.0/linux-arm/publish/* pi@iotdisplay:/home/pi/epaper

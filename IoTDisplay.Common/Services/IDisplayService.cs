@@ -39,6 +39,8 @@ namespace IoTDisplay.Common.Services
 
         public void Configure(IRenderService renderer, RenderSettings setting);
 
+        public void Dispose();
+
         #endregion Methods (Public)
     }
 }

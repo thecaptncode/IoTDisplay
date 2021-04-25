@@ -144,7 +144,13 @@ namespace IoTDisplay.Common.Services
                 _tickTimer.Elapsed -= UpdateClock;
                 _tickTimer.Enabled = false;
                 _tickTimer.Dispose();
-                Clear();
+                try
+                {
+                    Clear();
+                }
+                catch
+                {
+                }
             }
 
             _commandlist.Clear();

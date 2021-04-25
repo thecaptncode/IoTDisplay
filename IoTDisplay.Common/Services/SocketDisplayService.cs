@@ -32,7 +32,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class SocketDisplayService : IDisplayService
+    public class SocketDisplayService : IDisplayService, IDisposable
     {
         #region Properties
 
@@ -73,6 +73,7 @@ namespace IoTDisplay.Common.Services
         private DateTime _lastRestart;
         private DateTime _lastUpdated;
         private bool _updating = false;
+        private bool _disposed = false;
 
         #endregion Fields
 
@@ -84,7 +85,59 @@ namespace IoTDisplay.Common.Services
             _display = driver;
         }
 
-        public void Create(IRenderService renderer, RenderSettings settings)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (_updateTimer != null)
+                {
+                    _updateTimer.Elapsed -= UpdateScreen;
+                    _updateTimer.Enabled = false;
+                    _updateTimer.Dispose();
+                }
+
+                CloseAllConnections();
+
+                if (_display != null)
+                {
+                    _display.Shutdown(SocketShutdown.Both);
+                    _display.Close();
+                    _display.Dispose();
+                }
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~SocketDisplayService() => Dispose(false);
+
+        #endregion Constructor / Dispose / Finalizer
+
+        #region Methods (Private)
+
+        private static byte[] BuildHeader(string command, int dataLen)
+        {
+            int lenSize = sizeof(int) * 2;
+            byte[] cmdArr = command == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(command);
+            int[] lengths = new int[] { cmdArr.Length, dataLen };
+            byte[] header = new byte[lenSize + cmdArr.Length];
+            Buffer.BlockCopy(lengths, 0, header, 0, lenSize);
+            Buffer.BlockCopy(cmdArr, 0, header, lenSize, command.Length);
+            return header;
+        }
+
+        private void Create(IRenderService renderer, RenderSettings settings)
         {
             Console.WriteLine($"Starting SocketDisplayService driver: {_driverName}");
             settings.IncludeCommand = true;
@@ -102,43 +155,6 @@ namespace IoTDisplay.Common.Services
             _lastUpdated = new (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             _display.Listen(5);
             listenerTask = Task.Factory.StartNew(Listener);
-        }
-
-        /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~SocketDisplayService()
-        {
-            if (_updateTimer != null)
-            {
-                _updateTimer.Elapsed -= UpdateScreen;
-                _updateTimer.Enabled = false;
-                _updateTimer.Dispose();
-            }
-
-            CloseAllConnections();
-
-            if (_display != null)
-            {
-                _display.Shutdown(SocketShutdown.Both);
-                _display.Close();
-                _display.Dispose();
-            }
-        }
-
-        #endregion Constructor / Dispose / Finalizer
-
-        #region Methods (Private)
-
-        private static byte[] BuildHeader(string command, int dataLen)
-        {
-            int lenSize = sizeof(int) * 2;
-            byte[] cmdArr = command == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(command);
-            int[] lengths = new int[] { cmdArr.Length, dataLen };
-            byte[] header = new byte[lenSize + cmdArr.Length];
-            Buffer.BlockCopy(lengths, 0, header, 0, lenSize);
-            Buffer.BlockCopy(cmdArr, 0, header, lenSize, command.Length);
-            return header;
         }
 
         private void Listener()

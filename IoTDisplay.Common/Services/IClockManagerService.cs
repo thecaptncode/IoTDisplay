@@ -46,6 +46,8 @@ namespace IoTDisplay.Common.Services
 
         public void Export();
 
+        public void Dispose();
+
         #endregion Methods (Public)
     }
 }

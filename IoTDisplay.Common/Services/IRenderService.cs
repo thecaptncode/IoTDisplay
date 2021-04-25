@@ -59,6 +59,8 @@ namespace IoTDisplay.Common.Services
 
         public bool RenderCommand(RenderActions.RenderCommand command);
 
+        public void Dispose();
+
         #endregion Methods (Public)
     }
 

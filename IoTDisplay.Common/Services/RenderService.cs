@@ -30,7 +30,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class RenderService : IRenderService
+    public class RenderService : IRenderService, IDisposable
     {
         #region Properties and Events
 
@@ -81,9 +81,11 @@ namespace IoTDisplay.Common.Services
 
         private readonly SKCanvas _canvas;
 
+        private bool _disposed = false;
+
         #endregion Fields
 
-        #region Constructor
+        #region Constructor / Dispose / Finalizer
 
         public RenderService(RenderSettings settings, IClockManagerService clocks, List<IDisplayService> displays)
         {
@@ -103,7 +105,43 @@ namespace IoTDisplay.Common.Services
             Import(true);
         }
 
-        #endregion Constructor
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                _canvas.Dispose();
+                _screen.Dispose();
+                if (_clocks != null)
+                {
+                    _clocks.Dispose();
+                }
+
+                if (_displays != null)
+                {
+                    foreach (IDisplayService display in _displays)
+                    {
+                        display.Dispose();
+                    }
+                }
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~RenderService() => Dispose(false);
+
+        #endregion Constructor / Dispose / Finalizer
 
         #region Methods (Protected)
 
@@ -230,7 +268,7 @@ namespace IoTDisplay.Common.Services
                         newHeight = area.Width;
                     }
 
-                    SKBitmap image = new (newWidth, newHeight, _screen.ColorType, _screen.AlphaType, _screen.ColorSpace);
+                    using SKBitmap image = new (newWidth, newHeight, _screen.ColorType, _screen.AlphaType, _screen.ColorSpace);
                     using SKCanvas surface = new (image);
                     surface.Translate(newWidth, 0);
                     surface.RotateDegrees(_settings.Rotation);

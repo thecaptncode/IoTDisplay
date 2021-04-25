@@ -31,7 +31,7 @@ namespace IoTDisplay.Common.Services
 
     #endregion Using
 
-    public class WsEPaperDisplayService : IDisplayService
+    public class WsEPaperDisplayService : IDisplayService, IDisposable
     {
         #region Properties
 
@@ -65,6 +65,7 @@ namespace IoTDisplay.Common.Services
         private IRenderService _renderer;
         private bool _updating = false;
         private bool _delayed = false;
+        private bool _disposed = false;
 
         #endregion Fields
 
@@ -77,7 +78,52 @@ namespace IoTDisplay.Common.Services
             _refreshTime = refreshtime;
         }
 
-        public void Create(IRenderService renderer, RenderSettings settings)
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (_display != null)
+                {
+                    if (_updateTimer != null)
+                    {
+                        _updateTimer.Elapsed -= UpdateScreen;
+                        _updateTimer.Enabled = false;
+                        _updateTimer.Dispose();
+                    }
+
+                    if (_refreshTimer != null)
+                    {
+                        _refreshTimer.Elapsed -= RefreshScreen;
+                        _refreshTimer.Enabled = false;
+                        _refreshTimer.Dispose();
+                    }
+
+                    _display.Sleep();
+                    _display.Dispose();
+                }
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~WsEPaperDisplayService() => Dispose(false);
+
+        #endregion Constructor / Dispose / Finalizer
+
+        #region Methods (Private)
+
+        private void Create(IRenderService renderer, RenderSettings settings)
         {
             Console.WriteLine($"Starting eXoCooLd.Waveshare.EPaperDisplay driver: {_driverName}");
             if (_display != null)
@@ -108,36 +154,6 @@ namespace IoTDisplay.Common.Services
                 _refreshTimer.Elapsed += RefreshScreen;
             }
         }
-
-        /// <summary>
-        /// Finalizer
-        /// </summary>
-        ~WsEPaperDisplayService()
-        {
-            if (_display != null)
-            {
-                if (_updateTimer != null)
-                {
-                    _updateTimer.Elapsed -= UpdateScreen;
-                    _updateTimer.Enabled = false;
-                    _updateTimer.Dispose();
-                }
-
-                if (_refreshTimer != null)
-                {
-                    _refreshTimer.Elapsed -= RefreshScreen;
-                    _refreshTimer.Enabled = false;
-                    _refreshTimer.Dispose();
-                }
-
-                _display.Sleep();
-                _display.Dispose();
-            }
-        }
-
-        #endregion Constructor / Dispose / Finalizer
-
-        #region Methods (Private)
 
         private void Renderer_ScreenChanged(object sender, EventArgs e)
         {

@@ -85,7 +85,7 @@ namespace IoTDisplay.Common.Services
             Elapsed += ElapsedAction;
         }
 
-        protected override void Dispose(bool disposing)
+        protected new void Dispose(bool disposing)
         {
             if (_disposed)
             {
@@ -96,7 +96,6 @@ namespace IoTDisplay.Common.Services
             {
                 Elapsed -= ElapsedAction;
                 base.Dispose();
-                Enabled = true;
             }
 
             _disposed = true;

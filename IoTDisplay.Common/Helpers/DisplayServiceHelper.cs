@@ -23,6 +23,7 @@ namespace IoTDisplay.Common.Helpers
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Net;
     using System.Net.Sockets;
     using IoTDisplay.Common.Models;
     using IoTDisplay.Common.Services;
@@ -108,6 +109,41 @@ namespace IoTDisplay.Common.Helpers
                     catch (Exception ex)
                     {
                         throw new ArgumentException("Unable to establish IPCSocket end point", nameof(Configuration), ex);
+                    }
+
+                    displays.Add(new SocketDisplayService(screenDriver));
+                }
+                else if (driver.DriverType.Equals("TCPSocket", StringComparison.OrdinalIgnoreCase))
+                {
+                    Uri listener;
+                    try
+                    {
+                        listener = new ("net.tcp://" + (string.IsNullOrWhiteSpace(driver.Driver) ? Dns.GetHostName() : driver.Driver));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException($"Exception occurred trying to resolve listener {driver.Driver}", nameof(Configuration), ex);
+                    }
+
+                    Socket screenDriver;
+                    try
+                    {
+                        IPAddress ipAddress;
+                        if (listener.HostNameType == UriHostNameType.Dns)
+                        {
+                            ipAddress = Dns.GetHostEntry(listener.DnsSafeHost).AddressList[0];
+                        }
+                        else
+                        {
+                            ipAddress = IPAddress.Parse(listener.DnsSafeHost);
+                        }
+
+                        screenDriver = new (ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                        screenDriver.Bind(new IPEndPoint(ipAddress, listener.Port < 0 || listener.Port == 808 ? 11000 : listener.Port));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException("Unable to establish TCPSocket end point", nameof(Configuration), ex);
                     }
 
                     displays.Add(new SocketDisplayService(screenDriver));

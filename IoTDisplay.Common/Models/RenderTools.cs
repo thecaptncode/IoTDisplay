@@ -75,21 +75,21 @@ namespace IoTDisplay.Common.Models
             }
             catch (HttpRequestException ex)
             {
-                byte[] errorBytes = Encoding.UTF8.GetBytes(ex.ToString() + Environment.NewLine);
+                byte[] errorBytes = Encoding.UTF8.GetBytes(ex.Message + Environment.NewLine);
                 int len = errorBytes.Length;
-                if (responseBytes != null)
-                {
-                    len += responseBytes.Length;
-                }
-
                 if (reasonBytes != null)
                 {
                     len += reasonBytes.Length;
                 }
 
+                if (responseBytes != null)
+                {
+                    len += responseBytes.Length;
+                }
+
                 byte[] bytes = new byte[len];
                 len = 0;
-                if (responseBytes != null)
+                if (reasonBytes != null)
                 {
                     Buffer.BlockCopy(reasonBytes, 0, bytes, len, reasonBytes.Length);
                     len += reasonBytes.Length;
@@ -107,7 +107,7 @@ namespace IoTDisplay.Common.Models
             }
             catch (Exception ex)
             {
-                responseBytes = Encoding.UTF8.GetBytes(ex.ToString() + Environment.NewLine);
+                responseBytes = Encoding.UTF8.GetBytes(ex.Message + Environment.NewLine);
                 exitCode = 5;
             }
 

@@ -101,13 +101,27 @@ namespace IoTDisplay.Common.Services
                     _updateTimer.Dispose();
                 }
 
-                CloseAllConnections();
-
                 if (_display != null)
                 {
-                    _display.Shutdown(SocketShutdown.Both);
-                    _display.Close();
-                    _display.Dispose();
+                    try
+                    {
+                        CloseAllConnections();
+                        if (_display != null)
+                        {
+                            if (_display.Connected)
+                            {
+                                _display.Shutdown(SocketShutdown.Both);
+                            }
+
+                            _display.Close();
+                            _display.Dispose();
+                            File.Delete(_display.LocalEndPoint.ToString());
+                        }
+                    }
+                    catch
+                    {
+                        // Let it go
+                    }
                 }
             }
 
@@ -147,7 +161,7 @@ namespace IoTDisplay.Common.Services
             renderer.ScreenChanged += Renderer_ScreenChanged;
             _updateTimer = new ()
             {
-                TargetMillisecond = 300000,
+                TargetMillisecond = 59999,
                 ToleranceMillisecond = 5000,
                 Enabled = true
             };
@@ -166,7 +180,6 @@ namespace IoTDisplay.Common.Services
                 _readyNext.Reset();
 
                 // Start an asynchronous socket to listen for connections.
-                Console.WriteLine("Waiting for a connection...");
                 _display.BeginAccept(
                     new AsyncCallback(AcceptCallback),
                     _display);
@@ -184,7 +197,11 @@ namespace IoTDisplay.Common.Services
             {
                 try
                 {
-                    handler.Shutdown(SocketShutdown.Both);
+                    if (handler.Connected)
+                    {
+                        handler.Shutdown(SocketShutdown.Both);
+                    }
+
                     handler.Close();
                     handler.Dispose();
                 }
@@ -200,7 +217,11 @@ namespace IoTDisplay.Common.Services
             {
                 try
                 {
-                    handler.Shutdown(SocketShutdown.Both);
+                    if (handler.Connected)
+                    {
+                        handler.Shutdown(SocketShutdown.Both);
+                    }
+
                     handler.Close();
                     handler.Dispose();
                 }
@@ -213,7 +234,7 @@ namespace IoTDisplay.Common.Services
             _graphicClients.Clear();
         }
 
-        public void AcceptCallback(IAsyncResult ar)
+        private void AcceptCallback(IAsyncResult ar)
         {
             bool success = true;
             Socket handler = null;
@@ -309,12 +330,12 @@ namespace IoTDisplay.Common.Services
                         {
                             if (state.IsCommandMode)
                             {
-                                Console.WriteLine("Client using Command Mode");
+                                Console.WriteLine("Client connected using Command Mode");
                                 _commandClients.Add(handler);
                             }
                             else
                             {
-                                Console.WriteLine("Client using Graphic Mode");
+                                Console.WriteLine("Client connected using Graphic Mode");
                                 _graphicClients.Add(handler);
                             }
                         }
@@ -344,7 +365,11 @@ namespace IoTDisplay.Common.Services
                 Console.WriteLine("Exception occured in SendCallBack " + ex.Message);
                 if (handler != null)
                 {
-                    handler.Shutdown(SocketShutdown.Both);
+                    if (handler.Connected)
+                    {
+                        handler.Shutdown(SocketShutdown.Both);
+                    }
+
                     handler.Close();
                     handler.Dispose();
                     _graphicClients.Remove(handler);
@@ -419,10 +444,15 @@ namespace IoTDisplay.Common.Services
 
             foreach (Socket rmv in removeList)
             {
-                rmv.Shutdown(SocketShutdown.Both);
+                if (rmv.Connected)
+                {
+                    rmv.Shutdown(SocketShutdown.Both);
+                }
+
                 rmv.Close();
                 rmv.Dispose();
                 clientList.Remove(rmv);
+                Console.WriteLine("Client Closed");
             }
         }
 
@@ -589,11 +619,20 @@ namespace IoTDisplay.Common.Services
                     }
                 }
             }
+            else
+            {
+                byte[] data = Array.Empty<byte>();
+                byte[] header = BuildHeader("heartbeat", data.Length);
+                SendToClients(header, data, _graphicClients);
+                SendToClients(header, data, _commandClients);
+            }
         }
         #endregion Methods (Private)
 
+        #region Subclasses
+
         // State object for remote device.
-        public class StateObject
+        private class StateObject
         {
             // Size of receive buffer
             public const int BufferSize = 11;
@@ -608,5 +647,7 @@ namespace IoTDisplay.Common.Services
             // Data bytes remaining
             public int Remaining = BufferSize;
         }
+
+        #endregion Subclasses
     }
 }

@@ -66,7 +66,7 @@ namespace IoTDisplay.Common.Services
 
     #region EventArgs (Public)
 
-    public class ScreenChangedEventArgs : System.EventArgs
+    public class ScreenChangedEventArgs : EventArgs
     {
         public int X { get; init; }
 

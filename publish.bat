@@ -11,7 +11,7 @@ ssh pi@iotdisplay sudo rm /usr/local/iotdisplay/* /home/pi/epaper/*
 scp ./IoTDisplay.Console/bin/Release/net5.0/linux-arm/publish/* pi@iotdisplay:/home/pi/epaper
 scp ./IoTDisplay.Api/bin/Release/net5.0/linux-arm/publish/* pi@iotdisplay:/home/pi/epaper
 scp ../appsettings.json pi@iotdisplay:/home/pi/epaper/
-del ../appsettings.json
+del ..\appsettings.json
 ssh pi@iotdisplay sudo chmod 755 /home/pi/epaper/IoTDisplay.Console /home/pi/epaper/IoTDisplay.Api
 ssh pi@iotdisplay sudo cp /home/pi/epaper/* /usr/local/iotdisplay
 ssh pi@iotdisplay sudo systemctl start iotdisplay

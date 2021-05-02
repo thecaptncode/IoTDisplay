@@ -466,7 +466,7 @@ namespace IoTDisplay.Common.Services
                     using StreamWriter sw = File.CreateText(commandpath);
                     sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));
                 }
-                else if (new FileInfo(commandpath).Length < 4096)
+                else if (new FileInfo(commandpath).Length < 40960)
                 {
                     using StreamWriter sw = File.AppendText(commandpath);
                     sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));

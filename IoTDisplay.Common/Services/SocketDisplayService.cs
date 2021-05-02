@@ -544,7 +544,7 @@ namespace IoTDisplay.Common.Services
             }
         }
 
-        private void UpdateScreen(Object source, ElapsedEventArgs e)
+        private void UpdateScreen(object source, ElapsedEventArgs e)
         {
             if (_updating)
             {
@@ -631,7 +631,7 @@ namespace IoTDisplay.Common.Services
 
         #region Subclasses
 
-        // State object for remote device.
+        // State object for receiving data from remote device.
         private class StateObject
         {
             // Size of receive buffer

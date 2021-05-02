@@ -49,6 +49,7 @@ namespace IoTDisplay.Common.Services
                 Format = clockImage.Filename
             };
             _commandlist.Add(cmd);
+            _tickTimer.Interval = _newCommandDelay;
         }
 
         public void AddDraw(ClockActions.ClockDraw clockDraw)
@@ -63,6 +64,7 @@ namespace IoTDisplay.Common.Services
                 HexColor = clockDraw.SvgCommands
             };
             _commandlist.Add(cmd);
+            _tickTimer.Interval = _newCommandDelay;
         }
 
         public void AddTime(ClockActions.ClockTime clockTime, int width, int height)
@@ -85,6 +87,7 @@ namespace IoTDisplay.Common.Services
                 Height = height
             };
             _commandlist.Add(cmd);
+            _tickTimer.Interval = _newCommandDelay;
         }
 
         public override string ToString()
@@ -95,6 +98,8 @@ namespace IoTDisplay.Common.Services
         #endregion Methods (Public)
 
         #region Fields
+
+        private const int _newCommandDelay = 5000;
         private static TimerService _tickTimer;
         private readonly IRenderService _renderer;
         private readonly List<RenderCommand> _commandlist;
@@ -105,6 +110,7 @@ namespace IoTDisplay.Common.Services
         #endregion Fields
 
         #region Constructor / Dispose / Finalizer
+
         public ClockService(IRenderService renderer, string timezoneID, string screenbackground, string commands)
         {
             _renderer = renderer;
@@ -130,6 +136,10 @@ namespace IoTDisplay.Common.Services
                 Enabled = true
             };
             _tickTimer.Elapsed += UpdateClock;
+            if (!string.IsNullOrWhiteSpace(commands))
+            {
+                _tickTimer.Interval = _newCommandDelay;
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -168,6 +178,7 @@ namespace IoTDisplay.Common.Services
         #endregion Constructor / Dispose / Finalizer
 
         #region Methods (Private)
+
         private void UpdateClock(Object source, System.Timers.ElapsedEventArgs e)
         {
             // Get the time using the given time zone

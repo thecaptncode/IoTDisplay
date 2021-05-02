@@ -35,48 +35,48 @@ namespace IoTDisplay.Common.Helpers
     {
         #region Methods (Public)
 
-        public static IRenderService GetService(AppSettings.Api Configuration)
+        public static IRenderService GetService(AppSettings.Api configuration)
         {
             // Configuration settings are obtained from appsettings.json)
-            if (Configuration.Rotation != 0 && Configuration.Rotation != 90 && Configuration.Rotation != 180 && Configuration.Rotation != 270)
+            if (configuration.Rotation != 0 && configuration.Rotation != 90 && configuration.Rotation != 180 && configuration.Rotation != 270)
             {
-                throw new ArgumentException("Rotation must be 0, 90, 180 or 270", nameof(Configuration));
+                throw new ArgumentException("Rotation must be 0, 90, 180 or 270", nameof(configuration));
             }
 
-            if (string.IsNullOrWhiteSpace(Configuration.StateFolder))
+            if (string.IsNullOrWhiteSpace(configuration.StateFolder))
             {
-                Configuration.StateFolder = Path.GetTempPath();
+                configuration.StateFolder = Path.GetTempPath();
             }
 
-            if (!Configuration.StateFolder.EndsWith(Path.DirectorySeparatorChar))
+            if (!configuration.StateFolder.EndsWith(Path.DirectorySeparatorChar))
             {
-                Configuration.StateFolder += Path.DirectorySeparatorChar;
+                configuration.StateFolder += Path.DirectorySeparatorChar;
             }
 
-            if (!Directory.Exists(Configuration.StateFolder))
+            if (!Directory.Exists(configuration.StateFolder))
             {
-                throw new ArgumentException("StateFolder does not point to an existing folder", nameof(Configuration));
+                throw new ArgumentException("StateFolder does not point to an existing folder", nameof(configuration));
             }
 
             RenderSettings settings = new ()
             {
-                Rotation = Configuration.Rotation,
-                Statefolder = Configuration.StateFolder,
-                Background = Configuration.BackgroundColor,
-                Foreground = Configuration.ForegroundColor,
-                IncludeCommand = false
+                Rotation = configuration.Rotation,
+                Statefolder = configuration.StateFolder,
+                Background = configuration.BackgroundColor,
+                Foreground = configuration.ForegroundColor,
+                IncludeCommand = false,
             };
-            settings.Resize(Configuration.Width, Configuration.Height);
+            settings.Resize(configuration.Width, configuration.Height);
 
             IClockManagerService clocks = new ClockManagerService();
             List<IDisplayService> displays = new ();
-            foreach (AppSettings.Api.DriverDetails driver in Configuration.Drivers)
+            foreach (AppSettings.Api.DriverDetails driver in configuration.Drivers)
             {
                 if (driver.DriverType.Equals("eXoCooLd.Waveshare.EPaperDisplay", StringComparison.OrdinalIgnoreCase))
                 {
                     if (driver.RefreshTime.Days != 0)
                     {
-                        throw new ArgumentException("RefreshTime must not have a day portion", nameof(Configuration));
+                        throw new ArgumentException("RefreshTime must not have a day portion", nameof(configuration));
                     }
 
                     EPaperDisplayType screenDriver;
@@ -86,7 +86,7 @@ namespace IoTDisplay.Common.Helpers
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException("Unable to find eXoCooLd.Waveshare.EPaperDisplay driver", nameof(Configuration), ex);
+                        throw new ArgumentException("Unable to find eXoCooLd.Waveshare.EPaperDisplay driver", nameof(configuration), ex);
                     }
 
                     if (screenDriver != EPaperDisplayType.None)
@@ -108,7 +108,7 @@ namespace IoTDisplay.Common.Helpers
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException("Unable to establish IPCSocket end point", nameof(Configuration), ex);
+                        throw new ArgumentException("Unable to establish IPCSocket end point", nameof(configuration), ex);
                     }
 
                     displays.Add(new SocketDisplayService(screenDriver));
@@ -122,7 +122,7 @@ namespace IoTDisplay.Common.Helpers
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException($"Exception occurred trying to resolve listener {driver.Driver}", nameof(Configuration), ex);
+                        throw new ArgumentException($"Exception occurred trying to resolve listener {driver.Driver}", nameof(configuration), ex);
                     }
 
                     Socket screenDriver;
@@ -143,7 +143,7 @@ namespace IoTDisplay.Common.Helpers
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException("Unable to establish TCPSocket end point", nameof(Configuration), ex);
+                        throw new ArgumentException("Unable to establish TCPSocket end point", nameof(configuration), ex);
                     }
 
                     displays.Add(new SocketDisplayService(screenDriver));

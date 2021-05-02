@@ -179,7 +179,7 @@ void readWeather(hubitat.scheduling.AsyncResponse response, Map body) {
 		}
 		String text = current.desc
 		weatherData.alerts.each {
-			text += it.description.replace("\n", "").replace("\r", "").toLowerCase()
+			text += ", " + it.description.replace("\n", "").replace("\r", "").toLowerCase()
 		}
 		if (text.length() >= 60)
 			text = text.substring(0, 60)
@@ -376,8 +376,8 @@ void updateWeather(Map current, Map[] daily, String text) {
 						it.max + "° / " + it.min + "°</text>"
 			}
 		}
-		drawH += "\" fill=\"white\" stroke=\"black\"/>"
-		drawL += "\" fill=\"white\" stroke=\"black\" stroke-dasharray=\"2\"/>"
+		drawH += "\" fill=\"transparent\" stroke=\"black\"/>"
+		drawL += "\" fill=\"transparent\" stroke=\"gray\"/>"
 		displayDevice.addDrawing(0, 310, 800, 170, forecast + drawH + drawL, "yes")
 	}
 }
@@ -526,9 +526,7 @@ void uninstalled() {
 		"230N": "F06D",
 		"231D": "F068",
 		"231N": "F06A",
-		"232D": "F00E",
 		"232D": "F068",
-		"232N": "F02C",
 		"232N": "F06A",
 		"300D": "F065",
 		"300N": "F067",
@@ -558,9 +556,7 @@ void uninstalled() {
 		"503N": "F024",
 		"504D": "F007",
 		"504N": "F027",
-		"511D": "F007",
 		"511D": "F00A",
-		"511N": "F027",
 		"511N": "F02A",
 		"520D": "F007",
 		"520N": "F027",
@@ -629,8 +625,8 @@ void uninstalled() {
   "timezone": "America/New_York",
   "x": 545,
   "y": 0,
-  "width": 255,
-  "height": 110,
-  "svgCommands": '<rect width="255" height="110" fill="white" /><text x="230" y="60" font-family="Poiret One" font-weight="900" font-size="48" text-anchor="end" fill="black">{0:t}</text><text x="230" y="110" font-family="Poiret One" font-weight="900" font-size="38" text-anchor="end" fill="black">{0:ddd MMM d}</text>'
+  "width": 265,
+  "height": 120,
+  "svgCommands": '<rect width="265" height="120" fill="white" /><text x="240" y="60" font-family="Poiret One" font-weight="900" font-size="48" text-anchor="end" fill="black">{0:t}</text><text x="240" y="110" font-family="Poiret One" font-weight="900" font-size="38" text-anchor="end" fill="black">{0:ddd MMM d}</text>'
 }
 */

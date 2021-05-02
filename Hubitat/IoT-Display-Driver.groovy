@@ -191,7 +191,7 @@ void parse(String description) { log.info "${device.label} parse(String descript
 
 void parse(hubitat.scheduling.AsyncResponse response, Map body) {
 	if (dbgEnable) {
-		log.debug "${device.label} parse(${response.status}, ${body})"
+		log.debug "${device.label} parse(${response.status}, ${groovy.xml.XmlUtil.escapeXml(body as String)})"
 		response.each {
 			log.debug "${device.label} Response: ${it}"
 		}

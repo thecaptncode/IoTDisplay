@@ -26,3 +26,10 @@ The full documentation can be found in the [project Wiki.](https://github.com/th
 ### Installation
 
 The installation information can be found [here.](https://github.com/thecaptncode/IoTDisplay/wiki/Installation).
+
+
+&nbsp;
+
+[![The .NET Docs Show](https://www.promoteyoutubevideos.com/wp-content/uploads/2012/05/as-seen-on-youtube1.jpg "The .NET Docs Show")][dnd]
+
+[dnd]: https://www.youtube.com/watch?v=t-rFj54BsDI

@@ -154,7 +154,7 @@ void addImage(BigDecimal xPos, BigDecimal yPos, String filename, String delay = 
 	sendCmd("POST", "Image", json)
 }
 
-void addText(BigDecimal xPos, BigDecimal yPos, String text, BigDecimal horizAlign, BigDecimal, vertAlign, String font, BigDecimal fontSize,
+void addText(BigDecimal xPos, BigDecimal yPos, String text, BigDecimal horizAlign, BigDecimal vertAlign, String font, BigDecimal fontSize,
 			 BigDecimal fontWeight, BigDecimal fontWidth, String color, String delay = "no") {
 	Map json = ["x"         : xPos, "y": yPos, "value": text, "horizAlign": horizAlign, "vertAlign": vertAlign, "font": font, "fontSize": fontSize,
 				"fontWeight": fontWeight, "fontWidth": fontWidth, "hexColor": color, "delay": delay == "yes"]

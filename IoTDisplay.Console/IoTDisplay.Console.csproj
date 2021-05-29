@@ -3,6 +3,19 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageTags>raspberry-pi iot csharp dotnet openapi dotnet-core clocks epaper-screen hubitat dotnet5 waveshare-eink epaper-displays</PackageTags>
+    <Description>.NET 5 Project for network enabling an E-Paper screen - Console Application</Description>
+    <PackageId>thecaptncode.IoTDisplay.Console</PackageId>
+    <Version>1.0.4</Version>
+    <Authors>Greg Cannon</Authors>
+    <Company>Private Project</Company>
+    <Product>IoTDisplay Console Application</Product>
+    <Copyright>Greg Cannon</Copyright>
+    <PackageLicenseExpression>Apache-2.0 License</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/thecaptncode/IoTDisplay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/thecaptncode/IoTDisplay</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageReleaseNotes>New Desktop CommandClient added as less network intensive version of GraphicsClient</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -7,7 +7,7 @@
         x:Class="IoTDisplay.Desktop.MainWindow"
         Title="Desktop Viewer" Opened="MainWindow_Opened" Closing="MainWindow_Closing">
   <StackPanel>
-    <views:GraphicsClient Name="iotDisplay" Width="800" Height="480" ConnectionChanged="IotDisplay_ConnectionChanged"
+    <views:CommandClient Name="iotDisplay" Width="800" Height="480" ConnectionChanged="IotDisplay_ConnectionChanged"
       PointerPressed="IotDisplay_PointerPressed" PointerWheelChanged="IotDisplay_PointerWheelChanged" />
     <TextBox Name="txtEvent" Background="White" Height="200" IsEnabled="false" TextWrapping="Wrap"/>
     <Button Name="btnReconnect" Click="BtnReconnect_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="5">Reconnect</Button>

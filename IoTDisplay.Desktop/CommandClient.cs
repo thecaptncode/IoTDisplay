@@ -21,20 +21,22 @@ namespace IoTDisplay.Desktop
     #region Using
 
     using System;
+    using System.Diagnostics;
     using System.IO;
     using Avalonia;
     using Avalonia.Controls;
     using Avalonia.Media;
     using Avalonia.Media.Imaging;
-    using Avalonia.Skia;
+    using IoTDisplay.Common.Models;
+    using IoTDisplay.Common.Services;
     using SkiaSharp;
 
     #endregion Using
 
     /// <summary>
-    /// Control for IoTDisplay Graphics Client
+    /// Control for IoTDisplay Command Client
     /// </summary>
-    public class GraphicsClient : Control
+    public class CommandClient : Control
     {
         #region Fields and Events
 
@@ -42,8 +44,9 @@ namespace IoTDisplay.Desktop
         private CommunicationService _communications = null;
         private bool _isConnected = false;
         private string _connectionMessage = null;
-        private RenderTargetBitmap _renderTarget;
-        private ISkiaDrawingContextImpl _skiaContext;
+        private Bitmap _renderTarget;
+        private RenderSettings _settings;
+        private IRenderService _renderer = null;
 
         #endregion Fields and Events
 
@@ -74,20 +77,19 @@ namespace IoTDisplay.Desktop
         #region Constructor / Finalizer
 
         /// <summary>
-        /// Constructor for graphics client
+        /// Constructor for command client
         /// </summary>
-        public GraphicsClient()
+        public CommandClient()
         {
-            AttachedToVisualTree += GraphicsClient_AttachedToVisualTree;
-            DetachedFromVisualTree += GraphicsClient_DetachedFromVisualTree;
+            AttachedToVisualTree += CommandClient_AttachedToVisualTree;
+            DetachedFromVisualTree += CommandClient_DetachedFromVisualTree;
         }
 
         /// <summary>
-        /// Finalizer for graphics client
+        /// Finalizer for command clientS
         /// </summary>
-        ~GraphicsClient()
+        ~CommandClient()
         {
-            _skiaContext.Dispose();
             _renderTarget.Dispose();
         }
 
@@ -100,23 +102,28 @@ namespace IoTDisplay.Desktop
         /// </summary>
         /// <param name="sender">Control attached to</param>
         /// <param name="args">Event Arguments</param>
-        private void GraphicsClient_AttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs args)
+        private void CommandClient_AttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs args)
         {
-            _communications = new (StatusChanged, AddGraphics, null);
+            _communications = new (StatusChanged, AddGraphics, ProcessCommand);
             _communications.Configure(SocketType, Host);
         }
 
         /// <summary>
-        /// Dispose of communications client when control is detached
+        /// Dispose of communications client and renderer when control is detached
         /// </summary>
         /// <param name="sender">Control detached from</param>
         /// <param name="args">Event Arguments</param>
-        private void GraphicsClient_DetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs args)
+        private void CommandClient_DetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs args)
         {
             if (_communications != null)
             {
                 _communications.Dispose();
                 _communications = null;
+            }
+
+            if (_renderer != null)
+            {
+                _renderer.Dispose();
             }
         }
 
@@ -171,18 +178,42 @@ namespace IoTDisplay.Desktop
         /// <param name="height">Height of graphic</param>
         private void AddGraphics(Stream stream, int x, int y, int width, int height)
         {
-            using SKBitmap graphic = SKBitmap.Decode(stream);
             if (_renderTarget == null)
             {
-                _renderTarget = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
-                _skiaContext = _renderTarget.CreateDrawingContext(null) as ISkiaDrawingContextImpl;
-                _skiaContext.SkCanvas.Clear(SKColors.Transparent);
+                _settings = new ()
+                {
+                    Rotation = 0,
+                    Background = SKColor.Parse("#ffffff"),
+                    Foreground = SKColor.Parse("#000000"),
+                    IncludeCommand = false,
+                };
+                _settings.Resize(width, height);
+                _renderer = new RenderService(_settings, null, null);
             }
 
-            _skiaContext?.SkCanvas.DrawBitmap(
-                graphic,
-                new SKRect(0, 0, width, height),
-                new SKRect(x, y, width + x - 1, height + y - 1));
+            _renderer.Graphic(new RenderActions.Graphic() { X = x, Y = y, Data = stream });
+            _renderTarget = new Bitmap(_renderer.Screen);
+            InvalidateVisual();
+        }
+
+        /// <summary>
+        /// Process command and render to canvas
+        /// </summary>
+        /// <param name="command">Command name</param>
+        /// <param name="value">Command values</param>
+        private void ProcessCommand(string command, string value)
+        {
+            RenderActions.RenderCommand cmd = new () { CommandName = command, CommandValues = value };
+            try
+            {
+                _renderer.RenderCommand(cmd);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{DateTime.Now.ToLongTimeString()} Exeception occurred in ProcessCommand: {ex.Message}");
+            }
+
+            _renderTarget = new Bitmap(_renderer.Screen);
             InvalidateVisual();
         }
 

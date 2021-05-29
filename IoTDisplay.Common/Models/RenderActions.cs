@@ -228,6 +228,42 @@ namespace IoTDisplay.Common.Models
         }
 
         /// <summary>
+        /// Loads a graphical image on the screen
+        /// </summary>
+        public class Graphic
+        {
+            /// <summary>
+            /// X coordinate to place the image
+            /// </summary>
+            /// <example>10</example>
+            [Required]
+            [Option("-x", CommandOptionType.SingleValue, Description = "X coordinate to place the image")]
+            public int X { get; set; }
+
+            /// <summary>
+            /// Y coordinate to place the image
+            /// </summary>
+            /// <example>100</example>
+            [Required]
+            [Option("-y", CommandOptionType.SingleValue, Description = "Y coordinate to place the image")]
+            public int Y { get; set; }
+
+            /// <summary>
+            /// Data stream to decode
+            /// </summary>
+            [Required]
+            public Stream Data { get; set; }
+
+            /// <summary>
+            /// Delay screen update (optional)
+            /// </summary>
+            /// <example>false</example>
+            [DefaultValue(false)]
+            [Option("-d|--delay", CommandOptionType.SingleValue, Description = "Delay screen update (optional)")]
+            public bool Delay { get; set; } = false;
+        }
+
+        /// <summary>
         /// Draws an SVG object(s) on the screen
         /// </summary>
         [Command("draw", Description = "Draws an SVG object(s) on the screen")]

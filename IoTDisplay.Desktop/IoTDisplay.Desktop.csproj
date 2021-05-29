@@ -3,12 +3,25 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageTags>raspberry-pi iot csharp dotnet openapi dotnet-core clocks epaper-screen hubitat dotnet5 waveshare-eink epaper-displays avalonia</PackageTags>
+    <Description>.NET 5 Project for network enabling an E-Paper screen - Avalonia Desktop Viewer for Windows, macOS and X-Windows</Description>
+    <PackageId>thecaptncode.IoTDisplay.Desktop</PackageId>
+    <Version>1.0.4</Version>
+    <Authors>Greg Cannon</Authors>
+    <Company>Private Project</Company>
+    <Product>IoTDisplay Desktop Viewer</Product>
+    <Copyright>Greg Cannon</Copyright>
+    <PackageLicenseExpression>Apache-2.0 License</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/thecaptncode/IoTDisplay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/thecaptncode/IoTDisplay</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageReleaseNotes>New Desktop CommandClient added as less network intensive version of GraphicsClient</PackageReleaseNotes>
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.3" />
-    <PackageReference Include="Avalonia.Desktop" Version="0.10.3" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="0.10.3" />
+    <PackageReference Include="Avalonia" Version="0.10.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="0.10.5" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="0.10.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.0.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
@@ -16,6 +29,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
    </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\IoTDisplay.Common\IoTDisplay.Common.csproj" />
+  </ItemGroup>
   
   <ItemGroup>
     <None Update="appsettings.json">

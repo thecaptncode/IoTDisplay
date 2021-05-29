@@ -81,7 +81,7 @@ namespace IoTDisplay.Common.Services
 
         public SocketDisplayService(Socket driver)
         {
-            _driverName = driver.LocalEndPoint.AddressFamily.ToString() + ", " + driver.LocalEndPoint.ToString();
+            _driverName = driver.LocalEndPoint.AddressFamily.ToString() + ": " + driver.LocalEndPoint.ToString();
             _display = driver;
         }
 
@@ -142,12 +142,23 @@ namespace IoTDisplay.Common.Services
 
         private static byte[] BuildHeader(string command, int dataLen)
         {
-            int lenSize = sizeof(int) * 2;
             byte[] cmdArr = command == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(command);
-            int[] lengths = new int[] { cmdArr.Length, dataLen };
-            byte[] header = new byte[lenSize + cmdArr.Length];
-            Buffer.BlockCopy(lengths, 0, header, 0, lenSize);
-            Buffer.BlockCopy(cmdArr, 0, header, lenSize, command.Length);
+            byte[] header = new byte[8 + cmdArr.Length];
+            int rem = cmdArr.Length;
+            for (int i = 3; i >= 0; i--)
+            {
+                header[i] = (byte)(rem % 256);
+                rem = (rem - header[i]) / 256;
+            }
+
+            rem = dataLen;
+            for (int i = 7; i >= 4; i--)
+            {
+                header[i] = (byte)(rem % 256);
+                rem = (rem - header[i]) / 256;
+            }
+
+            Buffer.BlockCopy(cmdArr, 0, header, 8, command.Length);
             return header;
         }
 
@@ -265,7 +276,7 @@ namespace IoTDisplay.Common.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"{DateTime.Now.ToLongTimeString()} Exception starting receive {ex.Message}");
+                    Console.WriteLine("Exception starting receive " + ex.Message);
                     success = false;
                 }
             }
@@ -321,7 +332,7 @@ namespace IoTDisplay.Common.Services
                             }
                             catch (SocketException ex)
                             {
-                                Console.WriteLine($"{DateTime.Now.ToLongTimeString()} Exception starting to send data {ex.Message}");
+                                Console.WriteLine("Exception starting to send data " + ex.Message);
                                 success = false;
                             }
                         }
@@ -341,11 +352,10 @@ namespace IoTDisplay.Common.Services
                         }
                     }
                 }
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{DateTime.Now.ToLongTimeString()} Exception receiving data {ex.Message}");
+                Console.WriteLine("Exception receiving data " + ex.Message);
             }
         }
 
@@ -372,8 +382,22 @@ namespace IoTDisplay.Common.Services
 
                     handler.Close();
                     handler.Dispose();
-                    _graphicClients.Remove(handler);
-                    _commandClients.Remove(handler);
+                    try
+                    {
+                        if (_graphicClients.Contains(handler))
+                        {
+                            _graphicClients.Remove(handler);
+                        }
+                        else if (_commandClients.Contains(handler))
+                        {
+                            _commandClients.Remove(handler);
+                        }
+                    }
+                    catch
+                    {
+                        // Let it go
+                    }
+
                     Console.WriteLine("Client closed");
                 }
             }
@@ -451,8 +475,18 @@ namespace IoTDisplay.Common.Services
 
                 rmv.Close();
                 rmv.Dispose();
-                clientList.Remove(rmv);
-                Console.WriteLine("Client Closed");
+                if (clientList.Contains(rmv))
+                {
+                    try
+                    {
+                        clientList.Remove(rmv);
+                        Console.WriteLine("Client Closed");
+                    }
+                    catch
+                    {
+                        // Let it go
+                    }
+                }
             }
         }
 
@@ -495,11 +529,23 @@ namespace IoTDisplay.Common.Services
             }
 
             ScreenChangedEventArgs args = (ScreenChangedEventArgs)e;
-            if (_commandClients.Count > 0 && args.Command.CommandName != "refresh" && args.Command.CommandName != "update")
+            if (_commandClients.Count > 0 && args.Command.CommandName != "update")
             {
                 // Remaining commands are clear, image, draw, text, graphics
-                byte[] data = args.Command.CommandValues == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(args.Command.CommandValues);
-                byte[] header = BuildHeader(args.Command.CommandName, data.Length);
+                byte[] data;
+                byte[] header;
+                if (args.Command.CommandValues == "graphic" || args.Command.CommandValues == "image")
+                {
+                    (header, data) = GetScreen(args.X, args.Y, args.Width, args.Height);
+                    SendToClients(header, data, _commandClients);
+                }
+                else
+                {
+                    data = args.Command.CommandValues == null ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(args.Command.CommandValues);
+                    header = BuildHeader(args.Command.CommandName == "refresh" ? "clear" : args.Command.CommandName, data.Length);
+                    // Console.WriteLine($"Cmd/Data Length {args.Command.CommandName.Length}/{data.Length} Command {args.Command.CommandName} value {args.Command.CommandValues}");
+                }
+
                 SendToClients(header, data, _commandClients);
             }
 
@@ -646,6 +692,8 @@ namespace IoTDisplay.Common.Services
             public int BufferPos = 0;
             // Data bytes remaining
             public int Remaining = BufferSize;
+
+            public ManualResetEvent SendNext = new (false);
         }
 
         #endregion Subclasses

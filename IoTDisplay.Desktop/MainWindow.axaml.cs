@@ -23,6 +23,7 @@ namespace IoTDisplay.Desktop
     using System;
     using System.ComponentModel;
     using System.Diagnostics;
+    using System.IO;
     using Avalonia;
     using Avalonia.Controls;
     using Avalonia.Input;
@@ -30,6 +31,7 @@ namespace IoTDisplay.Desktop
     using Avalonia.Markup.Xaml;
     using Avalonia.Threading;
     using Avalonia.VisualTree;
+    using Microsoft.Extensions.Configuration;
 
     #endregion Using
 
@@ -43,6 +45,26 @@ namespace IoTDisplay.Desktop
 #if DEBUG
             this.AttachDevTools();
 #endif
+
+            IConfigurationRoot configuration;
+            configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            IConfigurationSection clientconfig = configuration.GetSection("Desktop");
+            if (clientconfig == null)
+            {
+                throw new Exception("Desktop section not found in configuration file.");
+            }
+
+            string socketType = clientconfig.GetSection("SocketType")?.Value;
+            string host = clientconfig.GetSection("Host")?.Value;
+
+            CommandClient iotDisplay = this.FindControl<CommandClient>("iotDisplay");
+            iotDisplay.SocketType = socketType ?? throw new Exception("SocketType not found in configuration file.");
+            iotDisplay.Host = host ?? throw new Exception("Host not found in configuration file.");
         }
 
         #endregion Constructor
@@ -56,13 +78,13 @@ namespace IoTDisplay.Desktop
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            GraphicsClient iotDisplay = this.FindControl<GraphicsClient>("iotDisplay");
+            CommandClient iotDisplay = this.FindControl<CommandClient>("iotDisplay");
             iotDisplay.Disconnect();
         }
 
         private void BtnReconnect_Click(object sender, RoutedEventArgs e)
         {
-            GraphicsClient iotDisplay = this.FindControl<GraphicsClient>("iotDisplay");
+            CommandClient iotDisplay = this.FindControl<CommandClient>("iotDisplay");
             iotDisplay.Reconnect();
         }
 
@@ -136,7 +158,7 @@ namespace IoTDisplay.Desktop
         private void StatusChange()
         {
             TextBox box = this.FindControl<TextBox>("txtEvent");
-            GraphicsClient iotDisplay = this.FindControl<GraphicsClient>("iotDisplay");
+            CommandClient iotDisplay = this.FindControl<CommandClient>("iotDisplay");
             box.Text = iotDisplay.IsConnected ? "Connected to server." : "Disconnected from server.";
             if (!string.IsNullOrEmpty(iotDisplay.ConnectionMessage))
             {

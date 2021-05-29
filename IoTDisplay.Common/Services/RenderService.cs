@@ -56,6 +56,8 @@ namespace IoTDisplay.Common.Services
 
         public IRenderService Image(RenderActions.Image image, bool persist = true) => AddImage(image, persist);
 
+        public IRenderService Graphic(RenderActions.Graphic graphic, bool persist = true) => AddGraphic(graphic, persist);
+
         public IRenderService Draw(RenderActions.Draw draw, bool persist = true) => AddDraw(draw, persist);
 
         public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true) =>
@@ -89,12 +91,18 @@ namespace IoTDisplay.Common.Services
 
         public RenderService(RenderSettings settings, IClockManagerService clocks, List<IDisplayService> displays)
         {
-            foreach (IDisplayService display in displays)
+            if (displays != null)
             {
-                display.Configure(this, settings);
+                foreach (IDisplayService display in displays)
+                {
+                    display.Configure(this, settings);
+                }
             }
 
-            clocks.Configure(this, settings);
+            if (clocks != null)
+            {
+                clocks.Configure(this, settings);
+            }
 
             _displays = displays;
             _settings = settings;
@@ -285,7 +293,7 @@ namespace IoTDisplay.Common.Services
         {
             _canvas.Clear(_settings.Background);
 
-            if (clearState)
+            if (clearState && _settings.Statefolder != null)
             {
                 string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
                 string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
@@ -337,6 +345,42 @@ namespace IoTDisplay.Common.Services
             }
 
             OnScreenChanged(image.X, image.Y, width, height, image.Delay, persist, "image", JsonSerializer.Serialize<RenderActions.Image>(image));
+            return this;
+        }
+
+        private IRenderService AddGraphic(RenderActions.Graphic graphic, bool persist = true)
+        {
+            if (graphic.X < 0 || graphic.X >= _settings.Width)
+            {
+                throw new ArgumentOutOfRangeException(nameof(graphic.X), graphic.X, "X coordinate is not within the screen");
+            }
+
+            if (graphic.Y < 0 || graphic.Y >= _settings.Height)
+            {
+                throw new ArgumentOutOfRangeException(nameof(graphic.Y), graphic.Y, "Y coordinate is not within the screen");
+            }
+
+            int width = 0;
+            int height = 0;
+            try
+            {
+                using SKBitmap img = SKBitmap.Decode(graphic.Data);
+                _canvas.DrawBitmap(img, graphic.X, graphic.Y);
+                width = img.Width;
+                height = img.Height;
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+                throw new ArgumentException("An exception occurred trying to add graphical image to the canvas: " + ex.Message, nameof(graphic.Data), ex);
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+            }
+
+            OnScreenChanged(graphic.X, graphic.Y, width, height, graphic.Delay, persist, "graphic", null);
             return this;
         }
 
@@ -441,7 +485,8 @@ namespace IoTDisplay.Common.Services
             }
             catch (Exception ex)
             {
-                throw new ArgumentException("An exception occurred processing render command", nameof(command), ex);
+                throw new ArgumentException($"An exception occurred processing render command {command.CommandName} with values {command.CommandValues}",
+                    nameof(command), ex);
             }
 
             return true;
@@ -449,137 +494,143 @@ namespace IoTDisplay.Common.Services
 
         private void Export(string command)
         {
-            bool lockSuccess = false;
-            try
+            if (_settings.Statefolder != null)
             {
-                Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
-                if (!lockSuccess)
+                bool lockSuccess = false;
+                try
                 {
-                    throw new TimeoutException("A wait for export lock timed out.");
-                }
-
-                string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
-                string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
-
-                if (!File.Exists(commandpath))
-                {
-                    using StreamWriter sw = File.CreateText(commandpath);
-                    sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));
-                }
-                else if (new FileInfo(commandpath).Length < 40960)
-                {
-                    using StreamWriter sw = File.AppendText(commandpath);
-                    sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));
-                }
-                else
-                {
-                    using (SKData currentScreen = _screen.Encode(SKEncodedImageFormat.Png, 100))
+                    Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
+                    if (!lockSuccess)
                     {
-                        using FileStream stream = File.Open(screenpath, FileMode.Create);
-                        currentScreen.SaveTo(stream);
-                        stream.Close();
+                        throw new TimeoutException("A wait for export lock timed out.");
                     }
 
-                    File.Delete(commandpath);
-                    _clocks.Export();
+                    string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
+                    string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
+
+                    if (!command.Equals("graphic") && !File.Exists(commandpath))
+                    {
+                        using StreamWriter sw = File.CreateText(commandpath);
+                        sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));
+                    }
+                    else if (!command.Equals("graphic") && new FileInfo(commandpath).Length < 40960)
+                    {
+                        using StreamWriter sw = File.AppendText(commandpath);
+                        sw.WriteLine(command.Replace("\r", " ").Replace("\n", string.Empty));
+                    }
+                    else
+                    {
+                        using (SKData currentScreen = _screen.Encode(SKEncodedImageFormat.Png, 100))
+                        {
+                            using FileStream stream = File.Open(screenpath, FileMode.Create);
+                            currentScreen.SaveTo(stream);
+                            stream.Close();
+                        }
+
+                        File.Delete(commandpath);
+                        _clocks.Export();
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An exception occurred exporting command " + command + ". " + ex.Message);
-            }
-            finally
-            {
-                if (lockSuccess)
+                catch (Exception ex)
                 {
-                    Monitor.Exit(_exportLock);
+                    Console.WriteLine("An exception occurred exporting command " + command + ". " + ex.Message);
+                }
+                finally
+                {
+                    if (lockSuccess)
+                    {
+                        Monitor.Exit(_exportLock);
+                    }
                 }
             }
         }
 
         private void Import(bool addClocks)
         {
-            bool lockSuccess = false;
-            try
+            if (Settings.Statefolder != null)
             {
-                Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
-                if (!lockSuccess)
+                bool lockSuccess = false;
+                try
                 {
-                    throw new TimeoutException("A wait for export lock timed out.");
-                }
-
-                ClearScreen(false);
-                string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
-                string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
-                bool updated = false;
-                if (File.Exists(screenpath))
-                {
-                    AddImage(new () { X = 0, Y = 0, Filename = screenpath, Delay = true }, false);
-                    Console.WriteLine("Previous screen restored");
-                    updated = true;
-                }
-
-                if (File.Exists(commandpath))
-                {
-                    using StreamReader sr = File.OpenText(commandpath);
-                    string command = string.Empty;
-                    while ((command = sr.ReadLine()) != null)
+                    Monitor.TryEnter(_exportLock, _exportLockTimeout, ref lockSuccess);
+                    if (!lockSuccess)
                     {
-                        if (!string.IsNullOrWhiteSpace(command))
+                        throw new TimeoutException("A wait for export lock timed out.");
+                    }
+
+                    ClearScreen(false);
+                    string screenpath = _settings.Statefolder + "IoTDisplayScreen.png";
+                    string commandpath = _settings.Statefolder + "IoTDisplayCommands.txt";
+                    bool updated = false;
+                    if (File.Exists(screenpath))
+                    {
+                        AddImage(new () { X = 0, Y = 0, Filename = screenpath, Delay = true }, false);
+                        Console.WriteLine("Previous screen restored");
+                        updated = true;
+                    }
+
+                    if (File.Exists(commandpath))
+                    {
+                        using StreamReader sr = File.OpenText(commandpath);
+                        string command = string.Empty;
+                        while ((command = sr.ReadLine()) != null)
                         {
-                            string[] cmd = command.Split('\t', 2);
-                            try
+                            if (!string.IsNullOrWhiteSpace(command))
                             {
-                                if (ProcessCommand(new RenderActions.RenderCommand { CommandName = cmd[0], CommandValues = cmd[1] }))
+                                string[] cmd = command.Split('\t', 2);
+                                try
                                 {
-                                    updated = true;
+                                    if (ProcessCommand(new RenderActions.RenderCommand { CommandName = cmd[0], CommandValues = cmd[1] }))
+                                    {
+                                        updated = true;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Unknown render command in state file: " + cmd[0]);
+                                    }
                                 }
-                                else
+                                catch (ArgumentException ex)
                                 {
-                                    Console.WriteLine("Unknown render command in state file: " + cmd[0]);
+                                    Console.Write(ex.Message + " during import: " + ex.InnerException.Message);
                                 }
-                            }
-                            catch (ArgumentException ex)
-                            {
-                                Console.Write(ex.Message + " during import: " + ex.InnerException.Message);
                             }
                         }
                     }
-                }
 
-                if (addClocks)
-                {
-                    _clocks.Import();
-                }
-
-                if (updated)
-                {
-                    OnScreenChanged(0, 0, _settings.Width, _settings.Height, false, false, "update", null);
-                }
-                else
-                {
-                    string execpath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-                    if (execpath.StartsWith("file:"))
+                    if (addClocks)
                     {
-                        execpath = execpath[5..];
+                        _clocks.Import();
                     }
 
-                    execpath = execpath.Trim('/').Trim('\\') + "/splash.png";
-                    if (File.Exists(execpath))
+                    if (updated)
                     {
-                        AddImage(new () { X = 0, Y = 0, Filename = execpath, Delay = false }, false);
+                        OnScreenChanged(0, 0, _settings.Width, _settings.Height, false, false, "update", null);
+                    }
+                    else
+                    {
+                        string execpath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                        if (execpath.StartsWith("file:"))
+                        {
+                            execpath = execpath[5..];
+                        }
+
+                        execpath = execpath.Trim('/').Trim('\\') + "/splash.png";
+                        if (File.Exists(execpath))
+                        {
+                            AddImage(new () { X = 0, Y = 0, Filename = execpath, Delay = false }, false);
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("An exception occurred importing commands. " + ex.Message);
-            }
-            finally
-            {
-                if (lockSuccess)
+                catch (Exception ex)
                 {
-                    Monitor.Exit(_exportLock);
+                    Console.WriteLine("An exception occurred importing commands. " + ex.Message);
+                }
+                finally
+                {
+                    if (lockSuccess)
+                    {
+                        Monitor.Exit(_exportLock);
+                    }
                 }
             }
         }

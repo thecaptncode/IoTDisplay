@@ -7,10 +7,23 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <Version>1.0.4</Version>
+    <Authors>Greg Cannon</Authors>
+    <PackageId>thecaptncode.IoTDisplay.Api</PackageId>
+    <Company>Private Project</Company>
+    <Copyright>Greg Cannon</Copyright>
+    <PackageLicenseExpression>Apache-2.0 License</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/thecaptncode/IoTDisplay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/thecaptncode/IoTDisplay</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageTags>raspberry-pi iot csharp dotnet openapi dotnet-core clocks epaper-screen hubitat dotnet5 waveshare-eink epaper-displays</PackageTags>
+    <Description>.NET 5 Project for network enabling an E-Paper screen - OpenAPI Server</Description>
+    <Product>IoTDisplay OpenApi Server</Product>
+    <PackageReleaseNotes>New Desktop CommandClient added as less network intensive version of GraphicsClient</PackageReleaseNotes>
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.6" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

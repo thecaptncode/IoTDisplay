@@ -55,6 +55,8 @@ namespace IoTDisplay.Common.Services
 
         public IRenderService Draw(RenderActions.Draw draw, bool persist = true);
 
+        public IRenderService Graphic(RenderActions.Graphic graphic, bool persist = true);
+
         public IRenderService Text(RenderActions.Text text, bool bold = false, bool persist = true);
 
         public bool RenderCommand(RenderActions.RenderCommand command);

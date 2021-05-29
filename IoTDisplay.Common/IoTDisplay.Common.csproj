@@ -7,6 +7,19 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <PackageTags>raspberry-pi iot csharp dotnet openapi dotnet-core clocks epaper-screen hubitat dotnet5 waveshare-eink epaper-displays</PackageTags>
+    <Description>.NET 5 Project for network enabling an E-Paper screen - Common LIbrary</Description>
+    <PackageId>thecaptncode.IoTDisplay.Common</PackageId>
+    <Version>1.0.4</Version>
+    <Authors>Greg Cannon</Authors>
+    <Company>Private Project</Company>
+    <Product>IoTDisplay Common Library</Product>
+    <Copyright>Greg Cannon</Copyright>
+    <PackageLicenseExpression>Apache-2.0 License</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/thecaptncode/IoTDisplay</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/thecaptncode/IoTDisplay</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageReleaseNotes>New Desktop CommandClient added as less network intensive version of GraphicsClient</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +31,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Svg.Skia" Version="0.5.3" />
+    <PackageReference Include="Svg.Skia" Version="0.5.5.3" />
     <PackageReference Include="TimeZoneConverter" Version="3.5.0" />
   </ItemGroup>
 

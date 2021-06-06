@@ -21,6 +21,7 @@ namespace IoTDisplay.Common.Services
     #region Using
 
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
@@ -57,7 +58,7 @@ namespace IoTDisplay.Common.Services
 
         #region Fields
 
-        private readonly IDictionary<string, ClockService> _clocks = new Dictionary<string, ClockService>();
+        private readonly ConcurrentDictionary<string, ClockService> _clocks = new ConcurrentDictionary<string, ClockService>();
         private IRenderService _renderer;
         private RenderSettings _settings;
         private bool _disposed = false;
@@ -137,10 +138,9 @@ namespace IoTDisplay.Common.Services
             if (_clocks.ContainsKey(tzId))
             {
                 _clocks[tzId].Dispose();
-                _clocks.Remove(tzId);
             }
 
-            _clocks.Add(tzId, new (_renderer, tzId, _settings.Background.ToString(), string.Empty));
+            _clocks.AddOrUpdate(tzId, new ClockService(_renderer, tzId, _settings.Background.ToString(), string.Empty), (key, value) => value);
             ExportClocks(false);
             return this;
         }
@@ -258,15 +258,24 @@ namespace IoTDisplay.Common.Services
                 throw;
             }
 
-            _clocks[tzId].Dispose();
-            _clocks.Remove(tzId);
-            string filepath = _settings.Statefolder + "IoTDisplayClock-" + RenderTools.CleanFileName(tzId) + ".json";
-            if (File.Exists(filepath))
+            if (_clocks.TryRemove(tzId, out ClockService clock))
             {
-                File.Delete(filepath);
+                clock.Dispose();
+                string filepath = _settings.Statefolder + "IoTDisplayClock-" + RenderTools.CleanFileName(tzId) + ".json";
+                if (File.Exists(filepath))
+                {
+                    File.Delete(filepath);
+                }
+
+                ExportClocks(false);
+            }
+            else
+            {
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+                throw new ArgumentException("Unable to delete clock", nameof(clockDelete.Timezone));
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
             }
 
-            ExportClocks(false);
             return this;
         }
 
@@ -287,6 +296,11 @@ namespace IoTDisplay.Common.Services
                 {
                     throw new ArgumentException("An exception occurred finding time zone: " + ex.Message, nameof(timezone), ex);
                 }
+            }
+
+            if (!verifyExists && _clocks.ContainsKey(tzi.Id))
+            {
+                throw new ArgumentException("Clock already exists for this time zone", nameof(timezone));
             }
 
             if (verifyExists && !_clocks.ContainsKey(tzi.Id))
@@ -337,7 +351,7 @@ namespace IoTDisplay.Common.Services
                     }
 
                     Console.WriteLine("Adding clock " + clock + " with state: " + json);
-                    _clocks.Add(clock, new (_renderer, clock, _settings.Background.ToString(), json));
+                    _clocks.AddOrUpdate(clock, new ClockService(_renderer, clock, _settings.Background.ToString(), json), (key, value) => value);
                 }
             }
         }

@@ -21,6 +21,7 @@ namespace IoTDisplay.Common.Services
     #region Using
 
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Net.Sockets;
@@ -49,17 +50,15 @@ namespace IoTDisplay.Common.Services
 
         #region Fields
 
-        private const int _displayLockTimeout = 60000;
         private const int _updateLockTimeout = 60000;
         private const int _maxListenerRestarts = 20;
         private static readonly ManualResetEvent _readyNext = new (false);
         private static Task listenerTask = null;
         private static bool _listenerStarted = false;
         private static TimerService _updateTimer;
-        private readonly object _displaylock = new ();
         private readonly object _updatelock = new ();
-        private readonly List<Socket> _graphicClients = new ();
-        private readonly List<Socket> _commandClients = new ();
+        private readonly ConcurrentDictionary<IntPtr, Socket> _graphicClients = new ();
+        private readonly ConcurrentDictionary<IntPtr, Socket> _commandClients = new ();
         private readonly string _driverName;
         private readonly Socket _display;
         private IRenderService _renderer;
@@ -204,10 +203,11 @@ namespace IoTDisplay.Common.Services
         private void CloseAllConnections()
         {
             Console.WriteLine("Closing all server connections");
-            foreach (Socket handler in _commandClients)
+            foreach (KeyValuePair<IntPtr, Socket> pair in _commandClients)
             {
                 try
                 {
+                    Socket handler = pair.Value;
                     if (handler.Connected)
                     {
                         handler.Shutdown(SocketShutdown.Both);
@@ -224,10 +224,11 @@ namespace IoTDisplay.Common.Services
 
             _commandClients.Clear();
 
-            foreach (Socket handler in _graphicClients)
+            foreach (KeyValuePair<IntPtr, Socket> pair in _graphicClients)
             {
                 try
                 {
+                    Socket handler = pair.Value;
                     if (handler.Connected)
                     {
                         handler.Shutdown(SocketShutdown.Both);
@@ -342,12 +343,12 @@ namespace IoTDisplay.Common.Services
                             if (state.IsCommandMode)
                             {
                                 Console.WriteLine("Client connected using Command Mode");
-                                _commandClients.Add(handler);
+                                _commandClients.AddOrUpdate(handler.Handle, handler, (key, value) => value);
                             }
                             else
                             {
                                 Console.WriteLine("Client connected using Graphic Mode");
-                                _graphicClients.Add(handler);
+                                _graphicClients.AddOrUpdate(handler.Handle, handler, (key, value) => value);
                             }
                         }
                     }
@@ -384,14 +385,8 @@ namespace IoTDisplay.Common.Services
                     handler.Dispose();
                     try
                     {
-                        if (_graphicClients.Contains(handler))
-                        {
-                            _graphicClients.Remove(handler);
-                        }
-                        else if (_commandClients.Contains(handler))
-                        {
-                            _commandClients.Remove(handler);
-                        }
+                        _graphicClients.TryRemove(handler.Handle, out handler);
+                        _commandClients.TryRemove(handler.Handle, out handler);
                     }
                     catch
                     {
@@ -440,14 +435,14 @@ namespace IoTDisplay.Common.Services
             }
         }
 
-        private void SendToClients(byte[] header, byte[] data, List<Socket> clientList)
+        private void SendToClients(byte[] header, byte[] data, ConcurrentDictionary<IntPtr, Socket> clientList)
         {
-            List<Socket> removeList = new ();
             // Begin sending the data to each remote device.
-            foreach (Socket handler in clientList)
+            foreach (KeyValuePair<IntPtr, Socket> pair in clientList)
             {
                 try
                 {
+                    Socket handler = pair.Value;
                     if (header.Length > 0)
                     {
                         handler.BeginSend(header, 0, header.Length, SocketFlags.None,
@@ -462,29 +457,17 @@ namespace IoTDisplay.Common.Services
                 }
                 catch (SocketException)
                 {
-                    removeList.Add(handler);
-                }
-            }
-
-            foreach (Socket rmv in removeList)
-            {
-                if (rmv.Connected)
-                {
-                    rmv.Shutdown(SocketShutdown.Both);
-                }
-
-                rmv.Close();
-                rmv.Dispose();
-                if (clientList.Contains(rmv))
-                {
-                    try
+                    Socket handler = pair.Value;
+                    if (handler.Connected)
                     {
-                        clientList.Remove(rmv);
-                        Console.WriteLine("Client Closed");
+                        handler.Shutdown(SocketShutdown.Both);
                     }
-                    catch
+
+                    handler.Close();
+                    handler.Dispose();
+                    if (clientList.TryRemove(pair))
                     {
-                        // Let it go
+                        Console.WriteLine("Client Closed");
                     }
                 }
             }
@@ -594,74 +577,53 @@ namespace IoTDisplay.Common.Services
         {
             if (_updating)
             {
+                int x;
+                int y;
+                int width;
+                int height;
                 bool lockSuccess = false;
                 try
                 {
-                    Monitor.TryEnter(_displaylock, _displayLockTimeout, ref lockSuccess);
+                    Monitor.TryEnter(_updatelock, _updateLockTimeout, ref lockSuccess);
                     if (!lockSuccess)
                     {
-                        throw new TimeoutException("A wait for display lock timed out.");
+                        throw new TimeoutException("A wait for update lock timed out.");
                     }
 
-                    int x;
-                    int y;
-                    int width;
-                    int height;
-                    try
+                    if (_graphicClients.Count > 0)
                     {
-                        lockSuccess = false;
-                        Monitor.TryEnter(_updatelock, _updateLockTimeout, ref lockSuccess);
-                        if (!lockSuccess)
+                        x = _sectionX1;
+                        y = _sectionY1;
+                        width = _sectionX2 - _sectionX1 + 1;
+                        height = _sectionY2 - _sectionY1 + 1;
+                        if (width * height > _threshold)
                         {
-                            throw new TimeoutException("A wait for update lock timed out.");
+                            x = 0;
+                            y = 0;
+                            width = _settings.Width;
+                            height = _settings.Height;
                         }
 
-                        if (_graphicClients.Count > 0)
-                        {
-                            x = _sectionX1;
-                            y = _sectionY1;
-                            width = _sectionX2 - _sectionX1 + 1;
-                            height = _sectionY2 - _sectionY1 + 1;
-                            if (width * height > _threshold)
-                            {
-                                x = 0;
-                                y = 0;
-                                width = _settings.Width;
-                                height = _settings.Height;
-                            }
+                        (byte[] header, byte[] data) = GetScreen(x, y, width, height);
+                        SendToClients(header, data, _graphicClients);
+                    }
 
-                            (byte[] header, byte[] data) = GetScreen(x, y, width, height);
-                            SendToClients(header, data, _graphicClients);
-                        }
-
-                        _lastUpdated = DateTime.UtcNow;
-                        _sectionX1 = int.MaxValue;
-                        _sectionY1 = int.MaxValue;
-                        _sectionX2 = int.MinValue;
-                        _sectionY2 = int.MinValue;
-                        _updating = false;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("An exception occurred sending screen to socket client. " + ex.Message);
-                    }
-                    finally
-                    {
-                        if (lockSuccess)
-                        {
-                            Monitor.Exit(_updatelock);
-                        }
-                    }
+                    _lastUpdated = DateTime.UtcNow;
+                    _sectionX1 = int.MaxValue;
+                    _sectionY1 = int.MaxValue;
+                    _sectionX2 = int.MinValue;
+                    _sectionY2 = int.MinValue;
+                    _updating = false;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("An exception occurred updating the screens. " + ex.Message);
+                    Console.WriteLine("An exception occurred sending screen to socket client. " + ex.Message);
                 }
                 finally
                 {
                     if (lockSuccess)
                     {
-                        Monitor.Exit(_displaylock);
+                        Monitor.Exit(_updatelock);
                     }
                 }
             }

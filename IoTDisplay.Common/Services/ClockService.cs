@@ -21,6 +21,7 @@ namespace IoTDisplay.Common.Services
     #region Using
 
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Text.Json;
     using IoTDisplay.Common.Models;
@@ -92,7 +93,7 @@ namespace IoTDisplay.Common.Services
 
         public override string ToString()
         {
-            return JsonSerializer.Serialize<List<RenderCommand>>(_commandlist);
+            return JsonSerializer.Serialize<ConcurrentBag<RenderCommand>>(_commandlist);
         }
 
         #endregion Methods (Public)
@@ -102,7 +103,7 @@ namespace IoTDisplay.Common.Services
         private const int _newCommandDelay = 5000;
         private static TimerService _tickTimer;
         private readonly IRenderService _renderer;
-        private readonly List<RenderCommand> _commandlist;
+        private readonly ConcurrentBag<RenderCommand> _commandlist = new ();
         private readonly string _screenBackgroundColor;
         private bool _disposed = false;
         private bool _hasDrawn = false;
@@ -116,17 +117,13 @@ namespace IoTDisplay.Common.Services
             _renderer = renderer;
             TimeZoneId = timezoneID;
             _screenBackgroundColor = screenbackground;
-            if (string.IsNullOrWhiteSpace(commands))
+            if (!string.IsNullOrWhiteSpace(commands))
             {
-                _commandlist = new ();
-            }
-            else
-            {
-                JsonSerializerOptions options = new ()
+                JsonSerializerOptions options = new () { AllowTrailingCommas = true };
+                foreach (RenderCommand cmd in JsonSerializer.Deserialize<List<RenderCommand>>(commands, options))
                 {
-                    AllowTrailingCommas = true
-                };
-                _commandlist = JsonSerializer.Deserialize<List<RenderCommand>>(commands, options);
+                    _commandlist.Add(cmd);
+                }
             }
 
             _tickTimer = new ()

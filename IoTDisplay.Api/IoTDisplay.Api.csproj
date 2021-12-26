@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -17,21 +18,24 @@
     <RepositoryUrl>https://github.com/thecaptncode/IoTDisplay</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>raspberry-pi iot csharp dotnet openapi dotnet-core clocks epaper-screen hubitat dotnet5 waveshare-eink epaper-displays</PackageTags>
-    <Description>.NET 5 Project for network enabling an E-Paper screen - OpenAPI Server</Description>
+    <Description>.NET 6 Project for network enabling an E-Paper screen - OpenAPI Server</Description>
     <Product>IoTDisplay OpenApi Server</Product>
     <PackageReleaseNotes>New Desktop CommandClient added as less network intensive version of GraphicsClient</PackageReleaseNotes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Startup.cs" />
+  </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
-    <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
-    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
   </ItemGroup>
 
   <ItemGroup>

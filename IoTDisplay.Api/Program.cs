@@ -16,36 +16,85 @@
 // --------------------------------------------------------------------------
 #endregion Copyright
 
-namespace IoTDisplay.Api
+#region Using
+
+#pragma warning disable SA1200 // Using directives should be placed correctly
+using System.ComponentModel;
+using IoTDisplay.Common.Helpers;
+using IoTDisplay.Common.Models;
+using Microsoft.OpenApi.Models;
+using SkiaSharp;
+#pragma warning restore SA1200 // Using directives should be placed correctly
+
+#endregion
+
+#region Configure Builder
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSystemd();
+builder.Host.UseWindowsService();
+builder.Services.AddEndpointsApiExplorer();
+
+OpenApiInfo openApiInfo = new ()
 {
-    #region Using
-
-    using Microsoft.AspNetCore.Hosting;
-    using Microsoft.Extensions.Hosting;
-
-    #endregion
-
-    public class Program
+    Title = "IoT Display API",
+    Version = "v1",
+    Description = "Internet of Things E-Paper Display Controller",
+    Contact = new ()
     {
-        #region Main
-
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        #endregion Main
-
-        #region Methods (Public)
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseUrls("http://*:5000;http://localhost:5001");
-                    webBuilder.UseStartup<Startup>();
-                });
-
-        #endregion Methods (Public)
+        Url = new ("https://github.com/thecaptncode")
     }
+};
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", openApiInfo);
+    DirectoryInfo dir = new (AppContext.BaseDirectory);
+    foreach (FileInfo fi in dir.EnumerateFiles("*.xml"))
+    {
+        c.IncludeXmlComments(fi.FullName, includeControllerXmlComments: true);
+    }
+});
+
+TypeDescriptor.AddAttributes(typeof(SKColor), new TypeConverterAttribute(typeof(SKColorTypeConverter)));
+AppSettings.Api settings = builder.Configuration.GetSection("Api").Get<AppSettings.Api>();
+builder.Services.AddSingleton(
+    DisplayServiceHelper.GetService(settings));
+builder.Services.AddControllers();
+
+#endregion Configure Builder
+
+#region Configure Application
+
+WebApplication app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
 }
+else
+{
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+// app.UseHttpsRedirection();
+app.UseRouting();
+
+app.UseAuthorization();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
+
+app.UseSwagger();
+
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint($"/swagger/{openApiInfo.Version}/swagger.json", openApiInfo.Title);
+});
+
+app.Run(settings.ListenerUrl);
+
+#endregion Configure Application

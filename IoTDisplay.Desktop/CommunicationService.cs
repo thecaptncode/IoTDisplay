@@ -57,8 +57,8 @@ namespace IoTDisplay.Desktop
 
         #region Fields
 
-        private static readonly Timer _beatTimer = new () { AutoReset = false, Enabled = false, Interval = _beatTimeout };
         private static readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager = new ();
+        private static Timer _beatTimer = new () { AutoReset = false, Enabled = false, Interval = _beatTimeout };
         private readonly ChangeStatus _connectionChanged;
         private readonly HandleGraphics _handleGraphics;
         private readonly HandleCommand _handleCommand;
@@ -99,8 +99,11 @@ namespace IoTDisplay.Desktop
             {
                 _beatTimer.Enabled = false;
                 _beatTimer.Dispose();
+                _beatTimer = null;
                 Shutdown("Client shutting down.");
-                _socket.Dispose();
+                _socket?.Close();
+                _socket?.Dispose();
+                _socket = null;
             }
 
             _disposed = true;
@@ -212,13 +215,10 @@ namespace IoTDisplay.Desktop
         /// <param name="reason">Reason for shutdown</param>
         public void Shutdown(string reason)
         {
-            if (_socket.Connected == true)
+            if (_socket != null)
             {
-                _socket.Shutdown(SocketShutdown.Both);
+                StatusChange(false, reason);
             }
-
-            _socket.Close();
-            StatusChange(false, reason);
         }
 
         #endregion Methods (Public)
@@ -240,10 +240,18 @@ namespace IoTDisplay.Desktop
                 server = (Socket)ar.AsyncState;
 
                 // Complete the connection.
-                server.EndConnect(ar);
+                if (server.Connected)
+                {
+                    server.EndConnect(ar);
 
-                message = "Socket connected to " + server.RemoteEndPoint.AddressFamily.ToString() + ": " + server.RemoteEndPoint.ToString();
-                success = true;
+                    message = "Socket connected to " + server.RemoteEndPoint.AddressFamily.ToString() + ": " + server.RemoteEndPoint.ToString();
+                    success = true;
+                }
+                else
+                {
+                    message = "ConnectCallback socket not connected";
+                    success = false;
+                }
             }
             catch (Exception ex)
             {
@@ -256,8 +264,16 @@ namespace IoTDisplay.Desktop
                 try
                 {
                     byte[] mode = Encoding.UTF8.GetBytes(_handleCommand == null ? "graphicmode" : "commandmode");
-                    server.BeginSend(mode, 0, mode.Length, 0,
+                    if (server.Connected)
+                    {
+                        server.BeginSend(mode, 0, mode.Length, 0,
                         new AsyncCallback(SendCallback), server);
+                    }
+                    else
+                    {
+                        message = "ConnectCallback starting send socket not connected";
+                        success = false;
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -266,7 +282,10 @@ namespace IoTDisplay.Desktop
                 }
             }
 
-            StatusChange(success, message);
+            if (server != null)
+            {
+                StatusChange(success, message);
+            }
         }
 
         /// <summary>
@@ -298,12 +317,6 @@ namespace IoTDisplay.Desktop
             {
                 if (server != null)
                 {
-                    if (server.Connected == true)
-                    {
-                        server.Shutdown(SocketShutdown.Both);
-                    }
-
-                    server.Close();
                     StatusChange(false, "SocketException in SendCallback: " + ex.Message);
                 }
             }
@@ -417,11 +430,17 @@ namespace IoTDisplay.Desktop
             }
             catch (SocketException ex)
             {
-                StatusChange(false, "SocketExeception occurred in ReceiveCallback: " + ex.Message);
+                if (_socket != null)
+                {
+                    StatusChange(false, "SocketExeception occurred in ReceiveCallback: " + ex.Message);
+                }
             }
             catch (Exception ex)
             {
-                StatusChange(false, "Exeception occurred in ReceiveCallback: " + ex.Message);
+                if (_socket != null)
+                {
+                    StatusChange(false, "Exeception occurred in ReceiveCallback: " + ex.Message);
+                }
             }
         }
 
@@ -493,12 +512,16 @@ namespace IoTDisplay.Desktop
             try
             {
                 _socket = new Socket(_endpoint.AddressFamily, SocketType.Stream, _protocolType);
+                // _socket.NoDelay = true;
                 _socket.BeginConnect(_endpoint,
                     new AsyncCallback(ConnectCallback), _socket);
             }
             catch (SocketException ex)
             {
-                StatusChange(false, "A SocketException was received trying to connect to remote server: " + ex.Message);
+                if (_socket != null)
+                {
+                    StatusChange(false, "A SocketException was received trying to connect to remote server: " + ex.Message);
+                }
             }
         }
 
@@ -524,15 +547,19 @@ namespace IoTDisplay.Desktop
                 if (_socket.Connected == true)
                 {
                     _socket.Shutdown(SocketShutdown.Both);
+                    _socket.Disconnect(false);
                 }
-
-                _socket.Close();
             }
 
-            _beatTimer.Enabled = connectStatus;
-            _beatTimer.Interval = _beatTimeout;
+            if (_beatTimer != null)
+            {
+                _beatTimer.Enabled = connectStatus;
+                _beatTimer.Interval = _beatTimeout;
+            }
+
             _connectionChanged(connectStatus, message);
         }
+
         #endregion Methods (Private)
 
         #region Subclasses

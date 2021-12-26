@@ -213,8 +213,7 @@ namespace IoTDisplay.Common.Services
                         handler.Shutdown(SocketShutdown.Both);
                     }
 
-                    handler.Close();
-                    handler.Dispose();
+                    handler.Disconnect(false);
                 }
                 catch
                 {
@@ -234,8 +233,7 @@ namespace IoTDisplay.Common.Services
                         handler.Shutdown(SocketShutdown.Both);
                     }
 
-                    handler.Close();
-                    handler.Dispose();
+                    handler.Disconnect(false);
                 }
                 catch
                 {
@@ -284,8 +282,7 @@ namespace IoTDisplay.Common.Services
 
             if (!success)
             {
-                handler.Close();
-                handler.Dispose();
+                handler?.Disconnect(false);
             }
         }
 
@@ -342,13 +339,13 @@ namespace IoTDisplay.Common.Services
                         {
                             if (state.IsCommandMode)
                             {
-                                Console.WriteLine("Client connected using Command Mode");
                                 _commandClients.AddOrUpdate(handler.Handle, handler, (key, value) => value);
+                                Console.WriteLine($"Client {handler.Handle} connected using Command Mode {_graphicClients.Count + _commandClients.Count} clients remain");
                             }
                             else
                             {
-                                Console.WriteLine("Client connected using Graphic Mode");
                                 _graphicClients.AddOrUpdate(handler.Handle, handler, (key, value) => value);
+                                Console.WriteLine($"Client {handler.Handle} connected using Graphic Mode {_graphicClients.Count + _commandClients.Count} clients remain");
                             }
                         }
                     }
@@ -376,24 +373,25 @@ namespace IoTDisplay.Common.Services
                 Console.WriteLine("Exception occured in SendCallBack " + ex.Message);
                 if (handler != null)
                 {
+                    IntPtr key = handler.Handle;
                     if (handler.Connected)
                     {
                         handler.Shutdown(SocketShutdown.Both);
                     }
 
-                    handler.Close();
-                    handler.Dispose();
+                    handler.Disconnect(false);
                     try
                     {
-                        _graphicClients.TryRemove(handler.Handle, out handler);
-                        _commandClients.TryRemove(handler.Handle, out handler);
+                        _graphicClients.TryRemove(key, out _);
+                        _commandClients.TryRemove(key, out _);
                     }
                     catch
                     {
+                        Console.WriteLine("Unable to remove client");
                         // Let it go
                     }
 
-                    Console.WriteLine("Client closed");
+                    Console.WriteLine($"Client {handler.Handle} closed {_graphicClients.Count + _commandClients.Count} clients remain");
                 }
             }
         }
@@ -463,8 +461,7 @@ namespace IoTDisplay.Common.Services
                         handler.Shutdown(SocketShutdown.Both);
                     }
 
-                    handler.Close();
-                    handler.Dispose();
+                    handler.Disconnect(false);
                     if (clientList.TryRemove(pair))
                     {
                         Console.WriteLine("Client Closed");

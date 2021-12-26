@@ -32,6 +32,7 @@ namespace IoTDisplay.Common.Models
         {
             #region Properties (subclass)
 
+            public string ListenerUrl { get; set; } = "http://*:5000";
             public List<DriverDetails> Drivers { get; set; }
             public int Width { get; set; } = 800;
             public int Height { get; set; } = 480;
